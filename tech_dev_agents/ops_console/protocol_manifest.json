@@ -1,0 +1,13 @@
+{
+  "protocol_version": "2.0",
+  "min_worker_version": "2.0",
+  "migrations": [
+    "050_dispatch_v2_schema.sql",
+    "051_dispatch_failure_policy.sql",
+    "051_dispatch_v2_dependencies.sql",
+    "052_knowledge_layer.sql",
+    "053_question_budget.sql",
+    "054_dispatch_decisions.sql",
+    "055_self_healing_hardening.sql"
+  ]
+}

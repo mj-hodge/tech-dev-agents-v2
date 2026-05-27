@@ -1,0 +1,9 @@
+[Unit]
+Description=Run cost collector daily at 23:55 UTC (STORY-022)
+
+[Timer]
+OnCalendar=*-*-* 23:55:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

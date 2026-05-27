@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.worktrees/
+deployment/dan-teams-app.zip
+*.egg-info/
+dist/
+build/
+.env
+.env.*
+.venv/
+node_modules/
+test-results/
+# Generated at cron runtime on Morris VM — do not commit snapshots
+state/morris/review-context.md

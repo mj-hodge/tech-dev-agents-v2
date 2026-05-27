@@ -1,0 +1,21 @@
+--- a/.sdlc/skills/phase-7/SKILL.md
++++ b/.sdlc/skills/phase-7/SKILL.md
+@@ -1,4 +1,20 @@
+ # Phase 7: Principal Developer
+
++## Playwright Spec Required (Frontend Stories)
++
++For any story whose Acceptance Diff lists `.tsx`, `.jsx`, `.css`, `.scss`, `.html`
++files OR whose seed mentions "dashboard", "UI", "frontend", "render", or "screen",
++Phase 7 MUST produce a Playwright spec in addition to test-design.md.
++
++**Spec location:** `e2e/<feature-area>.spec.ts`
++**Required tag:** `@smoke` on every test in the file
++**Screenshots:** call `await expect(page).toHaveScreenshot()` for key states;
++commit the generated `e2e/screenshots/` baseline in the same PR.
++**Config:** `e2e/playwright.config.ts` — already present in the repo.
++
++**Gate:** Phase 7 is NOT complete for frontend stories until `e2e/*.spec.{ts,tsx,js}`
++exists in the deliverable diff. The phase runner will refuse to advance if this file
++is missing.
++

@@ -1,0 +1,72 @@
+# Morris Action Log â 2026-05-02 (Evening Session)
+
+## PR Review Summary
+
+**Repos scanned:** advertising-amazon, tech-dev-agents, tech-gc-knowledgebase, gc-infra, sdlc-framework, fabric-keepa (0 PRs), gorilla-core-py (0 PRs), gc-data (0 PRs)
+
+**Total open PRs found:** 25
+
+---
+
+## Actions Taken
+
+### Formal reviews posted (new this session)
+
+| PR | Repo | Verdict | Key Findings |
+|----|------|---------|-------------|
+| #258 | tech-dev-agents | REQUEST_CHANGES | seed.md missing sections (CI gating) + rebase needed |
+| #260 | tech-dev-agents | REQUEST_CHANGES | seed.md missing sections (CI gating) + rebase needed |
+| #261 | tech-dev-agents | REQUEST_CHANGES | seed.md sections + _validate_api_key() dead + git log parser fragile |
+| #314 | advertising-amazon | APPROVED | C1 (gitlinks) + C2 (write_recovery_log) both verified fixed; 39/39 GREEN |
+| #315 | advertising-amazon | REQUEST_CHANGES | H3 gitlink count discrepancy (3 of 13 visible); verification dispatched |
+| #316 | advertising-amazon | READY TO MERGE | All 38 Q&A decisions populated; CI green; update PR body then merge |
+| #319 | advertising-amazon | APPROVED | All 4 showstoppers fixed (schema, bulk insert, audit sig, auth gate) |
+| #322 | advertising-amazon | CONDITIONAL APPROVE | B1-B4 fixed; TC-11 deferred; confirm snapshot_at column name |
+| #323 | advertising-amazon | APPROVED | C1 (json.dumps), H1 (test import), H2 (NameError) all fixed; 59 GREEN |
+| #330 | advertising-amazon | REQUEST_CHANGES | Rebase + dev-tasks.md + SEC-004 path fix required |
+| #1 | gc-infra | REQUEST_CHANGES | 7 CI failures: module/ â tf-modules/ rename not propagated to consumers |
+| #1 | sdlc-framework | COMMENT (rebase nudge) | Already approved 2026-04-20; just needs rebase |
+
+### Previously reviewed PRs (status unchanged â reworks previously dispatched)
+
+adv-amazon: #325 (APPROVE_WITH_CONDITIONS), #328 (CRITICAL UniqueConstraint â new dispatch this session), #329 (contaminated â new dispatch), #323 (approved), #331 (approved)
+tda: #257, #256, #250, #235 (all REQUEST_CHANGES from prior session)
+kb: #67, #68, #70, #71 (APPROVED â rebase dispatches added this session), #64 (REQUEST_CHANGES â new dispatch this session)
+
+### Dispatches sent (8 total this session)
+
+| Story | Rework of | Purpose |
+|-------|-----------|---------|
+| STORY-823 | STORY-816 | Fix PR #328 UniqueConstraint expression + TC-11 |
+| STORY-824 | STORY-322 | Clean PR #329 contaminated branch (node_modules, gitlinks, artifacts) |
+| STORY-825 | STORY-094 | Verify PR #315 gitlinks cleared |
+| STORY-826 | STORY-765 | Fix PR #64 phantom file + ads-research/ directory |
+| STORY-827 | STORY-810 | Rebase PR #67 (Cline Kanban Research) |
+| STORY-828 | STORY-811 | Rebase PR #68 (Gastown Framework Research) |
+| STORY-829 | STORY-812 | Rebase PR #70 (Stripe Minions Research) |
+| STORY-830 | STORY-814 | Rebase PR #71 (AWS Autonomous Cloud Coding Agents) |
+
+Queue depth at end of session: 31
+
+---
+
+## Mark's Attention Required
+
+1. **adv-amazon #316** â Self-review (Morris authored). All 38 strategy Q&A decisions populated, CI green, MERGEABLE. Update PR body removing "Do not merge yet" then approve + merge.
+
+2. **adv-amazon #322** â CONDITIONAL APPROVE. Two pre-merge confirmations:
+   - Verify `bsr_snapshots` table column is `snapshot_at` (not `fetched_at`)
+   - TC-11 follow-up must ship BEFORE `BSR_COMPETITOR_MONITOR_ENABLED` is turned on
+   - Close PR #328 first (duplicate implementation, STORY-823 fixing it)
+
+3. **gc-infra #1** â Human author (jduarte-buildstr). Team decision needed on subscription ID in plaintext (H-1). Author must fix 7 module source paths after modules/âtf-modules/ rename.
+
+4. **sdlc-framework #1** â Author (markoreta-gc) needs to rebase. 38 days old, already approved.
+
+5. **adv-amazon approved PRs** â After fix dispatches land (#315, #319, #323, #314): all need rebase then Mark merges. Branch protection blocks bot merges on advertising-amazon.
+
+---
+
+## Codex Adversarial Reviews
+
+Codex review (dual-review gate) could not be run this session â codex CLI not accessible from main session. The Claude Code deep reviews served as the primary quality gate. For Large PRs (#330, #329), Codex review should be completed before merge.

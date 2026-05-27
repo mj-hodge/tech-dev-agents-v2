@@ -1,0 +1,4 @@
+# Morris fleet-check — runs every 15 minutes as hermes user
+# Deployed to /etc/cron.d/morris-fleet-check on Morris VM
+# STORY-323: moved from hermes user crontab to system cron for resilience
+*/15 * * * * hermes /opt/agent/morris-fleet-check.sh

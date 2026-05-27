@@ -1,0 +1,255 @@
+name: Tests
+
+# Gate PRs + main on pytest so framework-contract tests (Acceptance Diff,
+# seed-sections, branch isolation, stale-claim recovery, 422-loop, session
+# resume, completion-gate relaxations, SDK [USAGE] emission, etc.) actually
+# block merges. Before this workflow existed, every compliance test Mark
+# and I wrote today was unenforced — it ran locally but nothing stopped a
+# merge that broke it. STORY-511 recs "enforce Acceptance Diff + Test
+# Criteria + Validation on every seed" need this workflow to be the
+# enforcement point.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  # Allow Morris or Mark to kick a run manually from the Actions tab.
+  workflow_dispatch:
+
+concurrency:
+  # One run per PR or main-commit — cancel superseded runs.
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python-tests:
+    name: Python contract + unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The .sdlc submodule is a private cross-org repo the default
+          # GITHUB_TOKEN can't clone (returns "Repository not found").
+          # Skill-dependent tests (e.g. test_phase_1_skill_mandates_*)
+          # already call pytest.skip() when .sdlc isn't populated — no
+          # need to wire a PAT dance for a handful of skip-safe tests.
+          submodules: false
+          # Full history so `git log --follow --format=%ct` resolves the
+          # first-commit timestamp for every seed.md. Default fetch-depth=1
+          # gives test_every_seed_written_after_20260422_has_required_sections
+          # only the HEAD commit, so every seed looks "post-cutoff" and the
+          # grandfather branch never fires — ~80 pre-rule seeds fail
+          # spuriously on every PR.
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Install the full requirements.txt rather than cherry-picking
+          # transitive deps. Contract tests live under tests/ops_console/
+          # which loads a conftest that imports tech_dev_agents.ops_console
+          # — that drags in the whole ops-console runtime (jwt, asyncpg,
+          # fastapi, httpx, pydantic, pydantic-settings, etc). Cheaper to
+          # pip-install everything than to chase each ImportError.
+          pip install pytest pytest-asyncio pytest-timeout pytest-cov respx
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements-test.txt ]; then pip install -r requirements-test.txt; fi
+
+      - name: Q6 grep gate — no except TypeError in v2 dispatch files
+        # Epic-Queue-v2, Story Q6: CI gate that blocks 'except TypeError' shims
+        # from creeping into v2 files.  Gated to dispatch_v2.py and
+        # dispatch_poller_v2.py only — legacy v1 files are excluded until
+        # the cutover drops v1 entirely (Story Q5).
+        run: |
+          V2_ROUTE="tech_dev_agents/ops_console/routes/dispatch_v2.py"
+          V2_POLLER="deployment/hermes/dispatch_poller_v2.py"
+          FAILED=0
+          for f in "${V2_ROUTE}" "${V2_POLLER}"; do
+            if [ -f "${f}" ]; then
+              if grep -n "except TypeError" "${f}"; then
+                echo "::error file=${f}::Q6 grep gate: 'except TypeError' shim found in ${f}. Remove the shim — v2 files must not use TypeError fallbacks."
+                FAILED=1
+              fi
+            fi
+          done
+          if [ "${FAILED}" -eq 1 ]; then
+            echo "Q6 grep gate FAILED: 'except TypeError' found in dispatch_v2.py or dispatch_poller_v2.py"
+            exit 1
+          fi
+          echo "Q6 grep gate passed: no 'except TypeError' in dispatch_v2.py or dispatch_poller_v2.py"
+
+      - name: Run framework-contract tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          # These tests are all mock-only / inspection-based and must not
+          # need a real DB, real Loki, or real agent VMs. They gate every
+          # PR so framework-level regressions ("Target Branch section
+          # dropped," "Acceptance Diff parser weakened," "SDK USAGE line
+          # format changed") fail the build.
+          pytest \
+            tests/test_sdlc_framework_compliance.py \
+            tests/test_acceptance_diff_gate.py \
+            tests/test_branch_isolation.py \
+            tests/test_511_session_resume.py \
+            tests/ops_console/test_stale_recovery_contract.py \
+            tests/ops_console/test_completion_gate_slug_relaxed.py \
+            tests/deployment/test_complete_422_no_loop.py \
+            tests/deployment/test_sdk_tool_usage_emission.py \
+            tests/deployment/test_phase_runner_frontend_enforcement.py \
+            tests/deployment/test_phase_runner_frontend_smoke_gate.py \
+            -v --tb=short --timeout=60
+
+  # STORY-541: Playwright smoke tests — agent row visual contract enforcement
+  # STORY-572 fix: run from repo root (package.json has only @playwright/test,
+  # no @vitest/expect) to avoid Symbol($$jest-matchers-object) collision that
+  # occurred when running from frontend/ where @vitest is installed.
+  playwright-smoke:
+    name: Playwright e2e smoke tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          # Repo-root package.json owns @playwright/test; frontend/ owns
+          # vitest. Installing from frontend/ pulled vitest into the
+          # Playwright runtime — at module load, @vitest/expect collided
+          # with Playwright's expect ("Cannot redefine property:
+          # Symbol($$jest-matchers-object)") and "No tests found" was
+          # the surface error. Every PR has been red since (run 24916368150).
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install Playwright deps (repo root)
+        run: npm ci
+
+      - name: Install frontend deps (for the Vite dev server)
+        # The Playwright config's webServer block runs `npm --prefix
+        # frontend run dev` to load the dashboard for the dashboard-row
+        # smoke tests. That requires frontend/'s node_modules.
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright smoke tests
+        # Uses e2e/playwright.config.ts (testDir: '.') so specs resolve from e2e/.
+        # npm run build is NOT needed — smoke specs hit the live baseURL (default
+        # localhost:5173 or $PLAYWRIGHT_BASE_URL) rather than a static build.
+        run: npx playwright test --config e2e/playwright.config.ts --grep @smoke --reporter=list
+        env:
+          CI: true
+
+  # Optional: a broader "collect everything" job that TRIES the rest of the
+  # suite but doesn't block merge if DB-backed tests skip. Useful signal
+  # but not a hard gate.
+  python-tests-full:
+    name: Full pytest suite (non-blocking)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The .sdlc submodule is a private cross-org repo the default
+          # GITHUB_TOKEN can't clone (returns "Repository not found").
+          # Skill-dependent tests (e.g. test_phase_1_skill_mandates_*)
+          # already call pytest.skip() when .sdlc isn't populated — no
+          # need to wire a PAT dance for a handful of skip-safe tests.
+          submodules: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      - run: |
+          pip install --upgrade pip
+          pip install pytest pytest-asyncio pytest-timeout pytest-cov respx
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements-test.txt ]; then pip install -r requirements-test.txt; fi
+      - env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          pytest tests/ -v --tb=short --timeout=60 \
+            --ignore=tests/ops_console/test_dispatch_db_service.py \
+            --ignore=tests/integration/ \
+            || echo "::warning::non-gating suite had failures (expected when Postgres not available)"
+
+  playwright-frontend-tests:
+    name: Playwright smoke tests (frontend PRs)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # NOTE: no continue-on-error — this job MUST gate merges for frontend PRs.
+    # The compliance test test_test_workflow_has_playwright_job_gating_frontend_changes
+    # asserts the absence of this key.
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+          fetch-depth: 0
+
+      - name: Detect frontend changes
+        id: detect
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="origin/${{ github.base_ref }}"
+          else
+            echo "is_frontend=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          CHANGED=$(git diff --name-only "$BASE"...HEAD 2>/dev/null || true)
+          if echo "$CHANGED" | grep -qE '\.(tsx?|jsx?|css|scss|html)$|^frontend/|^e2e/'; then
+            echo "is_frontend=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_frontend=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Node
+        if: steps.detect.outputs.is_frontend == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        if: steps.detect.outputs.is_frontend == 'true'
+        run: npm ci
+
+      - name: Install frontend deps (for the Vite dev server)
+        if: steps.detect.outputs.is_frontend == 'true'
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright browsers
+        if: steps.detect.outputs.is_frontend == 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright smoke tests
+        if: steps.detect.outputs.is_frontend == 'true'
+        run: npx playwright test --config e2e/playwright.config.ts --grep @smoke
+
+      - name: Upload Playwright report
+        if: steps.detect.outputs.is_frontend == 'true' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            e2e/screenshots/
+          if-no-files-found: ignore
+          retention-days: 14

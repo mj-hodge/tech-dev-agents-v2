@@ -1,0 +1,70 @@
+# Morris — Current Focus
+## Last Updated: 2026-04-16 10:47 PM ET
+
+## Active Right Now
+- **🔴 DISPATCH BUG INVESTIGATION — 3 Bugs Found Causing 41 Failures** — Claude Code investigation complete. Three compounding bugs in dispatch_poller.py and claude_sdk_tool.py causing 41 story failures:
+  1. **Bug 1 (PRIMARY):** claude_sdk_tool.py:223-226 — rate-limit exception handler exits with rc=0 instead of rc=1. Poller sees success → validates → no branch → re-enqueues → repeat. Caused STORY-323, 327-332 failures.
+  2. **Bug 2:** Poller rate-limit detection via journalctl is broken — SDK stdout goes through subprocess pipes, not journald. Rate-limit pause flag never set. Derrick had 67 fast-failure events in one day.
+  3. **Bug 3:** Branch validation for remediation stories uses wrong story number (looks for *315* but branch is story-322/...). Real work thrown away. Caused STORY-313, 314, 315, 334 failures.
+  4. **Bonus:** Retry prompt stacking — each retry wraps entire previous prompt wasting tokens.
+  - **Fixes needed:** 5 changes across claude_sdk_tool.py and dispatch_poller.py — Mark directed yes do the fixes
+  - **STORY-336 ✅ COMPLETED by Derrick** — PR #44 MERGED (fix(dispatch): 4 bugs causing 41 story failures). All 4 dispatch bugs patched. STORY-330 re-dispatched and CLAIMED BY DAN (SharePoint gorillaguides ingestion).
+  - **Pending tasks:** Fix dispatch_poller.py, close stale PRs #35 and #38, re-dispatch STORY-313/314/315, re-dispatch PHD stories 036-039
+- **🔴 INCIDENT: fba-shipped-sales data not landing in blob storage** — PR #95 changed stg-celigo filenames from DD.csv to {unix_ts}.csv. Pipeline runs fine but Celigo (external iPaaS) cant find new filenames. Morris investigated via Claude Code, confirmed data IS being written with new format. Fix options: (1) Revert PR #95 (recommended), (2) Update Celigo flow config, (3) Backfill old format. Awaiting Marks decision.
+- **Cron rewiring with `--script` pattern — ✅ COMPLETE** — Mark said "fix it all." Morris is rewiring ALL crons to use `hermes cron create --script`. The `--script` pattern was **tested and proven working** (cron `bcb65f843503` ran successfully — script collected API health, dispatch queue, 6 open PRs; LLM reasoned on pre-loaded data; no guard issues).
+  - ✅ Test script (`test-api-collector.py`) confirmed working — Mark copied it to `~/.hermes/scripts/`
+  - ✅ 4 production collector scripts written to skill `heartbeat-data-collector`: `heartbeat-collector.py`, `pr-review-collector.py`, `fleet-health-collector.py`, `standup-collector.py`
+  - ✅ Removed 5 broken/old crons: morris-heartbeat-trigger, morris-heartbeat, PR Review Cycle, Fleet Health, Daily Standup, Loki Error Monitor
+  - ✅ Guard updated — Morris can now cp/mv/ln/mkdir/touch in safe dirs
+  - ✅ 4 new crons created: Heartbeat (5090c23f69de, 15m), PR Review (82c30a48a25f, 14/18/22 UTC), Fleet Health (3acb31498c42, 12/16/20/0 UTC), Daily Standup (1723c3e2b985, weekdays 10 UTC)
+  - ✅ Heartbeat force-run triggered
+  - ✅ **CRON RACE CONDITION FIXED** — Discovered PRs #44/#45 were merged by Fleet Health/Heartbeat despite PR Review posting REQUEST CHANGES. Root cause: 3 crons had merge authority without shared state. Fixes: (1) PR Review now does atomic review+dispatch, (2) Heartbeat checks for prior REQUEST CHANGES before merge, (3) Fleet Health merge authority removed entirely.
+- **✅ STORY-337/346 — Dashboard cost display FIXED.** STORY-337 completed by Derrick (PR #45 closed, superseded). STORY-346 completed by Dan — PR #48 MERGED by Morris at 00:19Z Apr 17. Restores today_foundry_usd, today_sdk_usd, today_openai_usd fields to FleetAgentSummary. Bug 2 (Azure Cost API env vars) still requires Mark to configure.
+- **Day 2 Agentic Dev Research — IN PROGRESS** — Mark said "do it" at ~20:15 UTC. Claude Code running deep-dive on top 3 frameworks from Day 1 scan (Claude Code Agent Teams + Headless Mode, LangGraph, plus one more). Will produce code examples and recommendations.
+- **Terminal guard** — ✅ DEPLOYED. 118 tests green.
+
+## EPICs Q&A — Diana Takach Session
+- Q1.1–Q1.4: ✅ DECIDED
+- Q1.4c: ToS placement premium = performance-based, 10% increments, L7 eval
+- Q1.4d: Brand ROAS floor = $8
+- Q1.5: ✅ DECIDED — close-match highest, substitutes moderate, loose-match lower, complements lowest/paused. Editable inputs, performance override ON.
+- Q1.6: ✅ DECIDED — relative cap 3x ad group default, no minimum bid. No absolute ceiling needed (portfolio/campaign caps suffice).
+- Q1.7: 🟡 PARTIALLY DECIDED — daily changed-only bids 2AM-6AM ET, weekly full sweep day TBD by Diana.
+- Next: Q1.7 (awaiting Diana confirmation), then Q1.8+
+- Remaining: Q1.7 (partial)–Q1.11, Q2–Q4
+
+## Fleet Status
+- **Dan**: 🟡 Idle — finished STORY-340/346
+- **Derrick**: 🟡 Idle — finished STORY-336/337
+- **Queue**: empty (0 pending, 0 claimed)
+- **All services**: ✅ healthy (gateway, log-sync, promtail)
+- **Ops console**: ✅ 3/3 agents reachable, Loki OK
+
+## Action Needed
+1. ~~**Fix dispatch bugs**~~ — ✅ DONE (STORY-336/PR #44 merged). All 4 dispatch bugs patched.
+2. ~~Close stale PRs~~ — tech-dev-agents #35 and #38 were ALREADY MERGED, no action needed
+3. **Re-dispatch stories** — STORY-313, STORY-314, STORY-315 (once bugs fixed)
+4. **Re-dispatch PHD stories** — STORY-036-039 (once SDK issue fixed)
+5. **Celigo incident** — Awaiting Mark decision on PR #95 revert
+6. **Re-dispatch STORY-330/331** — SharePoint ingestion stories (failed to clear zombie queue, need fresh IDs)
+7. **Azure Cost API env vars** — Mark must set AZURE_SUBSCRIPTION_ID, AZURE_MANAGED_IDENTITY_CLIENT_ID, and OPS_AZURE_AGENT_MAP in /opt/ops-console/deployment/ops-console/.env and assign Cost Management Reader role to VM managed identity
+
+## Interrupted/Paused Work
+- STORY-329 (rebase PR #35): Cancelled — needs re-dispatch
+- STORY-330 (rebase PR #38): Cancelled — needs re-dispatch
+- STORY-331 (Docker CI fix): Cancelled — needs re-dispatch
+- STORY-330/331 (SharePoint ingestion): Failed by Morris to clear zombie queue — need re-dispatch with fresh IDs
+
+## PRs Awaiting Mark
+- advertising-amazon #95: MERGED — ⚠️ CAUSED INCIDENT, Celigo cant find new unix_ts filenames. Revert recommended.
+- advertising-amazon #93: APPROVED, ❌ BLOCKED by branch protection — Mark must merge or grant tech-agent-morris-gc bypass (STORY-316 SDLC remediation)
+- advertising-amazon #92: APPROVED, ❌ BLOCKED by branch protection — Mark must merge or grant tech-agent-morris-gc bypass (STORY-258 review fixes)
+
+## Key Context
+- Rate limits reset at 3pm UTC (2026-04-16) — both agents available
+- Queue intentionally cleared at 12:40 UTC to stop churn — needs refilling
+- 48 failed story attempts in last 24h — all from rate-limit churn (now resolved)
+- All 5 open PRs have Morris reviews posted
+- tech-dev-agents PRs #35 and #38 need rebases before merge
+- Mark directive: Use jq (not python3 -c) for JSON parsing — python3 blocked by guard
+- Mark directive: Always use Claude Code for deep investigations

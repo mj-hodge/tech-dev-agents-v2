@@ -1,0 +1,32 @@
+# Morris VM crontab — proposed (2026-04-23)
+# Install with: crontab deployment/vm/morris-crontab.txt
+#
+# Cost changes vs prior crontab:
+#   fleet-check:  Opus → Sonnet (--model claude-sonnet-4-6 added)
+#   ping:         `claude -p ping` → pure-shell health-ping.sh  (LLM removed)
+#   sdlc-pull:    script now exists; was missing from disk
+#   cost_monitor: unchanged (pure shell, no LLM)
+#   graph-token:  unchanged (m365 CLI, no LLM)
+
+# Graph token refresh — pure shell (m365 CLI), no LLM
+*/30 * * * * sudo /opt/agent/refresh_graph_token.sh >> /tmp/hermes-combined.log 2>&1
+
+# Cost monitoring — pure shell, reads journalctl
+0 * * * * AGENT_NAME=morris /opt/agent/cost_monitor.sh >> /tmp/hermes-combined.log 2>&1
+
+# Liveness probe — pure shell curl, replaces `claude -p ping`
+0 */6 * * * /opt/agent/health-ping.sh >> /tmp/hermes-combined.log 2>&1
+
+# SDLC submodule pull — git pull + submodule update, no LLM
+0 6 * * * /opt/agent/sdlc-pull-cron.sh >> /tmp/hermes-combined.log 2>&1
+
+# Fleet vigilance — Sonnet only (--model claude-sonnet-4-6 in script)
+0 */2 * * * /opt/agent/morris-fleet-check.sh
+
+# Foundry spend pace alert — pure Python, no LLM (STORY-585)
+# Fires at :05 each hour; alerts Mark via Teams DM if pace > $30/hr AND daily spend > $50
+5 * * * * /opt/morris/venv/bin/python /opt/morris/foundry_pace_check.py >> /var/log/morris/foundry-pace.log 2>&1
+
+# STORY-734: Overnight operating mode schedule (00:00–07:00 ET = 05:00–12:00 UTC)
+0 5 * * *  /opt/morris/venv/bin/python /opt/morris/set_mode.py light --reason overnight_schedule >> /var/log/morris/orchestrator.log 2>&1
+0 12 * * * /opt/morris/venv/bin/python /opt/morris/set_mode.py full  --reason overnight_end      >> /var/log/morris/orchestrator.log 2>&1

@@ -1,0 +1,102 @@
+# Ops Console — Docker Compose stack
+# STORY-032: Containerize ops console with PostgreSQL
+#
+# Usage:
+#   docker compose -f deployment/ops-console/docker-compose.yml up -d
+#   docker compose -f deployment/ops-console/docker-compose.yml logs -f ops-console
+#   docker compose -f deployment/ops-console/docker-compose.yml down
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ops-console-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ops_console
+      POSTGRES_USER: ops_console
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ops_console_dev}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../../scripts/migrations/001_dispatch_queue.sql:/docker-entrypoint-initdb.d/001_dispatch_queue.sql:ro
+      - ../../scripts/migrations/002_dispatch_title.sql:/docker-entrypoint-initdb.d/002_dispatch_title.sql:ro
+      - ../../scripts/migrations/003_commit_sha_on_dispatch.sql:/docker-entrypoint-initdb.d/003_commit_sha_on_dispatch.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ops_console"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  ops-console:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: ops-console
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${OPS_PORT:-8005}:8005"
+    environment:
+      # Database — connects to the postgres container
+      OPS_DATABASE_URL: postgresql://ops_console:${POSTGRES_PASSWORD:-ops_console_dev}@postgres:5432/ops_console
+      # Auth (required — set in .env or override)
+      OPS_OPS_CONSOLE_API_KEY: ${OPS_CONSOLE_API_KEY:?Set OPS_CONSOLE_API_KEY in .env}
+      OPS_LOKI_API_KEY: ${LOKI_API_KEY:?Set LOKI_API_KEY in .env}
+      OPS_AGENT_API_KEY: ${AGENT_API_KEY:?Set AGENT_API_KEY in .env}
+      # Loki
+      OPS_LOKI_URL: ${LOKI_URL:-https://grafana.gorillacommerce.ai}
+      # Teams (optional)
+      OPS_GRAPH_API_TOKEN: ${GRAPH_API_TOKEN:-}
+      # GitHub (optional)
+      OPS_GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      # Entra ID SSO (optional)
+      OPS_ENTRA_TENANT_ID: ${ENTRA_TENANT_ID:-}
+      OPS_ENTRA_CLIENT_ID: ${ENTRA_CLIENT_ID:-}
+      # Monday.com (optional)
+      OPS_MONDAY_CONFIG: ${MONDAY_CONFIG:-{}}
+      # Azure Cost (optional — managed identity, no client secret needed)
+      OPS_AZURE_SUBSCRIPTION_ID: ${AZURE_SUBSCRIPTION_ID:-}
+      OPS_AZURE_MANAGED_IDENTITY_CLIENT_ID: ${AZURE_MANAGED_IDENTITY_CLIENT_ID:-}
+      # Server
+      OPS_HOST: "0.0.0.0"
+      OPS_PORT: "8005"
+      # CORS (optional)
+      OPS_CORS_ORIGINS: ${CORS_ORIGINS:-}
+      # Feature gates — codified here so a `docker compose up --force-recreate`
+      # cannot silently lose them (they were previously set via `docker run -e`,
+      # invisible to the repo and lost on any recreate without re-injection).
+      # Default to "true" once we've decided to ship the feature.
+      OPS_DISPATCH_NEEDS_INFO_ENABLED: ${DISPATCH_NEEDS_INFO_ENABLED:-true}
+      OPS_DISPATCH_PRIORITY_ENABLED: ${DISPATCH_PRIORITY_ENABLED:-true}
+      OPS_DISPATCH_CLAIM_SYNC_ENABLED: ${DISPATCH_CLAIM_SYNC_ENABLED:-true}
+      # STORY-898: ID-reuse gate — block silent hijack of terminal slots.
+      # When true, /api/dispatch/v2/enqueue rejects payloads whose
+      # (story_id, repo) has any prior terminal row UNLESS rework_of is set.
+      # NOTE: read directly via os.environ in dispatch_v2.py; not OPS_-prefixed.
+      DISPATCH_V2_ID_REUSE_GATE: ${DISPATCH_V2_ID_REUSE_GATE:-false}
+      OPS_DISPATCH_PAUSE_ENABLED: ${DISPATCH_PAUSE_ENABLED:-true}
+      OPS_DISPATCH_REVIEW_ENABLED: ${DISPATCH_REVIEW_ENABLED:-true}
+      OPS_AGENT_QUOTA_ENABLED: ${AGENT_QUOTA_ENABLED:-true}
+      OPS_DASHBOARD_OVERHAUL_ENABLED: ${DASHBOARD_OVERHAUL_ENABLED:-true}
+      OPS_GRAFANA_WEBHOOK_ENABLED: ${GRAFANA_WEBHOOK_ENABLED:-false}
+    env_file:
+      - .env
+    volumes:
+      # Mount the agent registry so /api/fleet, /api/agents/* endpoints can
+      # enumerate the fleet. Without this the container starts with 0 agents
+      # and the ops console appears empty. Added 2026-04-15 after Docker
+      # compose `--force-recreate` dropped a manually-added mount.
+      - /opt/ops-console/deployment/vm/agent-registry.json:/opt/ops-console/deployment/vm/agent-registry.json:ro
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8005/api/health')"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+volumes:
+  pgdata:
+    driver: local

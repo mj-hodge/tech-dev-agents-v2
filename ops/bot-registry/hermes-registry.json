@@ -1,0 +1,69 @@
+{
+  "version": "1.0",
+  "updated_at_utc": "2026-03-26T19:02:00Z",
+  "owner_team": "platform-ai",
+  "bots": [
+    {
+      "bot_id": "tech-dev-agents-hermes-dev",
+      "display_name": "Dan (Dev Agent)",
+      "email": "tech-agent-dan@gorillacommerce.co",
+      "status": "active",
+      "purpose": "Engineering assistant runtime",
+      "runtime": {
+        "platform": "azure-container-apps",
+        "provisioning_state": "provisioned",
+        "subscription_id": "d0f0feff-78ef-4425-9d51-07f5e0f0bcba",
+        "resource_group": "rg-tech-dev-agents-dev",
+        "container_app_name": "ca-tech-dev-agents-dev",
+        "container_environment": "cae-tech-dev-agents-dev",
+        "region": "eastus",
+        "image": "acrtechdevagentsdev.azurecr.io/hermes-agent:dan-v1",
+        "health_base_url": "https://ca-tech-dev-agents-dev.yellowdune-d31b2d4f.eastus.azurecontainerapps.io"
+      },
+      "identity": {
+        "managed_identity": "user-assigned",
+        "principal_id": "aa0343b8-945e-444b-aa51-30aec91fea17"
+      },
+      "integrations": {
+        "teams": {
+          "enabled": true,
+          "bot_registration": "dan-dev-agent",
+          "bot_app_id_secret_ref": "kv://kv-tech-dev-agents-dev/bot-app-id",
+          "bot_app_password_secret_ref": "kv://kv-tech-dev-agents-dev/bot-app-password"
+        },
+        "email": {
+          "enabled": false,
+          "provider": "microsoft-graph",
+          "client_id_secret_ref": "",
+          "client_secret_ref": ""
+        },
+        "claude_code": {
+          "enabled": true
+        }
+      },
+      "secrets": [
+        "kv://kv-tech-dev-agents-dev/anthropic-api-key",
+        "kv://kv-tech-dev-agents-dev/openai-api-key",
+        "kv://kv-tech-dev-agents-dev/bot-app-id",
+        "kv://kv-tech-dev-agents-dev/bot-app-password",
+        "kv://kv-tech-dev-agents-dev/github-token"
+      ],
+      "logs": {
+        "source": "containerapp-logs",
+        "workspace": "log-tech-dev-agents-dev",
+        "retention_days": 30,
+        "query_hint": "ContainerAppConsoleLogs_CL | where ContainerAppName_s == 'ca-tech-dev-agents-dev'"
+      },
+      "alerts": {
+        "health_check_required": true,
+        "error_rate_alert": true,
+        "log_ingestion_alert": true
+      },
+      "runbooks": [
+        "docs/bots/hermes/README.md",
+        "docs/azure-predeploy-setup.md"
+      ],
+      "notes": "First production dev agent (Dan). Infrastructure provisioned with Claude Code CLI and gh CLI; Anthropic API key and GitHub token must be set in Key Vault before use."
+    }
+  ]
+}

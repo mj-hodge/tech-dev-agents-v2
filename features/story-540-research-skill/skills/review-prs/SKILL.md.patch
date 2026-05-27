@@ -1,0 +1,19 @@
+--- a/.sdlc/skills/review-prs/SKILL.md
++++ b/.sdlc/skills/review-prs/SKILL.md
+@@ -718,3 +718,17 @@
+   2026-04-16T21:36Z: PRs #44, #45, #46 all had the same bundling issue — dispatching 3 separate
+   fix stories would have created 3 more bundled PRs.
++
++## Research Delegation
++
++Research tangents that arise mid-review — dispatch them via `/research` and keep the review tight.
++
++**Definition of research:** Pure information retrieval, audit, tradeoff analysis, codebase
++survey, or exploration — anything that doesn't directly contribute to the current PR verdict.
++
++**Threshold:** If a question or investigation would take > ~10 turns and isn't needed to
++determine the PR's merge-readiness, stop and dispatch via `/research` instead.
++
++**Action:** Invoke `/research "<the research question>"` to dispatch it to an available agent.
++Resume the PR review immediately — don't wait for research results. Note in the review comment
++that a research dispatch was sent for the tangential question.

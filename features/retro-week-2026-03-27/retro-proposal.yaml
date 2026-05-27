@@ -1,0 +1,140 @@
+# retro-proposal.yaml
+version: 1
+project: tech-dev-agents
+epic: "Weekly Retro 2026-03-27 to 2026-04-01 (no formal epic)"
+date: 2026-04-01
+metrics:
+  stories: 12
+  tests: 341
+  fix_loops: 0
+  code_review_findings: 148
+  critical_findings: 0
+  production_incidents: 1
+  reverted_commits: 3
+
+proposals:
+  - id: F-001
+    finding: "V2 stories (012-014) lacked epic decomposition, causing 3 reverts and consolidation into STORY-016. ~6 hours wasted on superseded implementations."
+    category: "Phase 1"
+    severity: High
+    target_file: "agents/phase-1-seed.md"
+    action: "Add mini-epic decomposition gate when 3+ related stories are being added to a backlog"
+    proposed_text: |
+      ## Gate: Related Story Check
+      When adding a new story to an existing backlog:
+      - If 3+ stories share a common integration point, deployment target, or UI surface: STOP
+      - Run a mini-decomposition: could these stories be one story with sub-tasks?
+      - Check for shared infrastructure (API layer, deployment, auth) that should be a single story
+      - If consolidation is warranted, create one story and archive the others before proceeding
+    evidence:
+      occurrences: 1
+      stories: ["STORY-012", "STORY-013", "STORY-014", "STORY-016"]
+
+  - id: F-002
+    finding: "Frozen dataclass + dependency injection + protocol interface pattern produced zero-fix-loop code reviews across all 11 v1 stories"
+    category: "Phase 6"
+    severity: Medium
+    target_file: "agents/phase-6-design.md"
+    action: "Add 'Recommended Implementation Patterns' section codifying the winning patterns"
+    proposed_text: |
+      ## Recommended Implementation Patterns (validated in tech-dev-agents v1)
+      - **Value objects:** Use frozen dataclasses (`@dataclass(frozen=True)`) for immutable domain models
+      - **Dependencies:** Use Protocol interfaces for all external dependencies (enables testing without mocks)
+      - **Module exports:** Explicit `__all__` in every module — no implicit star imports
+      - **Type safety:** Full type annotations on all public APIs
+      These patterns produced 0 code review fix loops across 11 stories (148 tests).
+    evidence:
+      occurrences: 11
+      stories: ["STORY-001", "STORY-002", "STORY-003", "STORY-005", "STORY-006", "STORY-007", "STORY-008", "STORY-009", "STORY-010", "STORY-011", "STORY-016"]
+
+  - id: F-003
+    finding: "Ops review not triggered for deployment/infrastructure changes — only for feature stories. SDK bypass incident could have been caught."
+    category: "Phase 6d"
+    severity: High
+    target_file: "agents/phase-6d-ops-review.md"
+    action: "Extend ops review trigger to include deployment and infrastructure changes"
+    proposed_text: |
+      ## Trigger Scope
+      Ops review is required for:
+      - Feature stories (Medium+ scope) — existing trigger
+      - **NEW: Any deployment, infrastructure, or VM provisioning change** — even if not a formal story
+      - **NEW: Any agent onboarding or configuration change** — SDK setup, tooling config, service registration
+      An ops review for infra changes can be lightweight (checklist, not full report) but must cover: service management, monitoring, health checks, rollback procedure.
+    evidence:
+      occurrences: 1
+      stories: ["Dan deployment", "Derrick VM provisioning"]
+
+  - id: F-004
+    finding: "Uncommitted enum serialization fix discovered in Phase 8b — Phase 8 lacked final integration smoke test"
+    category: "Phase 8"
+    severity: Medium
+    target_file: "agents/phase-8-implementation.md"
+    action: "Add final smoke test gate at end of Phase 8 before entering code review"
+    proposed_text: |
+      ## Gate: Final Smoke Test (before Phase 8b)
+      Before marking Phase 8 complete:
+      1. Run the FULL test suite (not just the new tests) — `pytest` with no filters
+      2. If any test fails, fix and commit before proceeding
+      3. Run `git status` — if there are uncommitted changes, commit them
+      4. Verify: test count matches test-design.md expectations
+      Phase 8 is NOT complete until all tests pass and all changes are committed.
+    evidence:
+      occurrences: 1
+      stories: ["STORY-016"]
+
+  - id: F-005
+    finding: "Phase 9 and 10 silently skipped for STORY-016 (largest story of the week) without justification or follow-up task"
+    category: "Guidance"
+    severity: High
+    target_file: "software-development-guidance.md"
+    action: "Require explicit skip justification and follow-up task when skipping Phase 9 or 10"
+    proposed_text: |
+      ## Phase Skip Policy
+      Phases 9 (Refinement) and 10 (Operations) may be deferred but NEVER silently skipped:
+      - Record skip reason in `.project` Phase History (e.g., "deferred to post-deploy")
+      - Create a follow-up task in the backlog: "STORY-XXX: Complete Phase 9/10"
+      - If the story is Large scope or will be deployed to production, Phase 10 is REQUIRED before deployment
+    evidence:
+      occurrences: 1
+      stories: ["STORY-016"]
+
+  - id: F-006
+    finding: "Pre-deploy gate (Phase 11) verifies code quality but not deployment environment readiness"
+    category: "Phase 11"
+    severity: High
+    target_file: "agents/phase-11-predeploy.md"
+    action: "Add deployment environment verification section to pre-deploy gate"
+    proposed_text: |
+      ## Check: Deployment Environment Readiness (if deploying to a target environment)
+      - [ ] Target environment exists and is accessible
+      - [ ] Service management configured (systemd unit, Docker compose, etc.)
+      - [ ] Monitoring connected (Loki/Grafana, health endpoint registered)
+      - [ ] SDK/tooling dependencies installed and verified (not just assumed)
+      - [ ] Rollback procedure documented
+      - [ ] Environment-specific config (.env, secrets) reviewed
+      Skip this check only if the story is library-only with no deployment target.
+    evidence:
+      occurrences: 1
+      stories: ["STORY-016", "Dan deployment"]
+
+  - id: F-010
+    finding: "Phase 7 test design is the #1 contributor to code quality — 100% first-pass approval rate directly attributable to thorough test design"
+    category: "Phase 7"
+    severity: Low
+    target_file: null
+    action: "No change — document as validated best practice"
+    proposed_text: null
+    evidence:
+      occurrences: 12
+      stories: ["All stories"]
+
+  - id: F-011
+    finding: "Multi-perspective code review (architect, skeptic, simplifier, rule-reviewer) catches diverse issue types without creating fix loops"
+    category: "Phase 8b"
+    severity: Low
+    target_file: null
+    action: "No change — document as validated best practice"
+    proposed_text: null
+    evidence:
+      occurrences: 12
+      stories: ["All stories"]

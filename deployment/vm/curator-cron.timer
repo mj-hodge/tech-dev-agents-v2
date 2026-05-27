@@ -1,0 +1,14 @@
+# curator-cron.timer — STORY-340
+# Fires every Sunday at 13:00 UTC (9 AM ET)
+# Triggers curator-cron.service → Cole the Curator
+
+[Unit]
+Description=Weekly Cole the Curator cron (Sunday 13:00 UTC)
+
+[Timer]
+OnCalendar=Sun *-*-* 13:00:00 UTC
+Persistent=true
+RandomizedDelaySec=60
+
+[Install]
+WantedBy=timers.target

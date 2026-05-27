@@ -1,0 +1,166 @@
+# STORY-495: CI/CD Pipeline for Ops Console
+# Builds frontend on GitHub-hosted runner, deploys to VM via SCP/SSH.
+# Feature-flagged: set OPS_CONSOLE_CICD_ENABLED=true in repo variables to activate.
+
+name: Deploy Ops Console
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - 'tech_dev_agents/ops_console/**'
+      - 'frontend/**'
+      - 'deployment/ops-console/**'
+
+concurrency:
+  group: deploy-ops-console
+  cancel-in-progress: false  # Don't cancel in-progress deploys
+
+jobs:
+  # ------------------------------------------------------------------
+  # Gate: check feature flag before doing anything
+  # ------------------------------------------------------------------
+  check-flag:
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.flag.outputs.enabled }}
+    steps:
+      - name: Check OPS_CONSOLE_CICD_ENABLED
+        id: flag
+        run: |
+          if [ "${{ vars.OPS_CONSOLE_CICD_ENABLED }}" = "true" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "✅ CI/CD pipeline is enabled"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "⏭️ CI/CD pipeline is disabled (set OPS_CONSOLE_CICD_ENABLED=true to enable)"
+          fi
+
+  # ------------------------------------------------------------------
+  # Job 1: Build frontend on GitHub-hosted runner (7GB RAM)
+  # ------------------------------------------------------------------
+  build-frontend:
+    runs-on: ubuntu-latest
+    needs: check-flag
+    if: needs.check-flag.outputs.enabled == 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Upload frontend dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+          retention-days: 1
+
+  # ------------------------------------------------------------------
+  # Job 2: Deploy to VM via SCP + SSH
+  # ------------------------------------------------------------------
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [check-flag, build-frontend]
+    if: needs.check-flag.outputs.enabled == 'true'
+    environment: ops-console-prod
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download frontend dist
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.OPS_CONSOLE_DEPLOY_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          echo "${{ secrets.OPS_CONSOLE_HOST_KEY }}" >> ~/.ssh/known_hosts
+
+      - name: Create deploy package
+        run: |
+          # STORY-1019 follow-up (2026-05-18 18:34Z outage): the prior tar
+          # only bundled tech_dev_agents/ops_console/, so any cross-package
+          # import from ops_console (e.g. tech_dev_agents.morris.pre_dispatch)
+          # crashed the container on import. Bundle the entire tech_dev_agents/
+          # tree so dispatch_v2.py's full import closure ships. Exclude tests
+          # + __pycache__ to keep the tarball small.
+          SHORT_SHA="${GITHUB_SHA:0:8}"
+          echo "${SHORT_SHA}" > .deploy-commit-sha
+          tar czf deploy-package.tar.gz \
+            --exclude='tech_dev_agents/**/tests' \
+            --exclude='tech_dev_agents/**/__pycache__' \
+            --exclude='tech_dev_agents/**/*.pyc' \
+            frontend/dist/ \
+            tech_dev_agents/ \
+            scripts/migrations/ \
+            deployment/ops-console/deploy.sh \
+            deployment/ops-console/rollback.sh \
+            .deploy-commit-sha
+          echo "Bundled tech_dev_agents subpackages:"
+          tar tzf deploy-package.tar.gz | awk -F/ '/^tech_dev_agents\//{print $1"/"$2}' | sort -u
+
+      - name: SCP deploy package to VM
+        run: |
+          scp -i ~/.ssh/deploy_key -o ConnectTimeout=30 \
+            deploy-package.tar.gz \
+            azureagent@${{ vars.OPS_CONSOLE_VM_IP }}:/tmp/deploy-package.tar.gz
+
+      - name: Extract and deploy on VM
+        id: deploy
+        run: |
+          SHORT_SHA="${GITHUB_SHA:0:8}"
+          ssh -i ~/.ssh/deploy_key -o ConnectTimeout=30 \
+            azureagent@${{ vars.OPS_CONSOLE_VM_IP }} \
+            "mkdir -p /tmp/deploy-package && \
+             cd /tmp && tar xzf deploy-package.tar.gz -C deploy-package && \
+             bash /tmp/deploy-package/deployment/ops-console/deploy.sh ${SHORT_SHA}"
+
+      - name: Verify health check
+        id: health
+        run: |
+          ssh -i ~/.ssh/deploy_key -o ConnectTimeout=30 \
+            azureagent@${{ vars.OPS_CONSOLE_VM_IP }} \
+            'curl -sf http://localhost:8005/api/health && echo "Health check passed"'
+
+      - name: Rollback on failure
+        if: failure() && steps.deploy.outcome == 'failure'
+        run: |
+          echo "⚠️ Deployment failed — triggering rollback"
+          ssh -i ~/.ssh/deploy_key -o ConnectTimeout=30 \
+            azureagent@${{ vars.OPS_CONSOLE_VM_IP }} \
+            "bash /opt/ops-console/deployment/ops-console/rollback.sh" || \
+            echo "❌ CRITICAL: Rollback also failed — manual intervention required"
+
+      - name: Notify Teams (success)
+        if: success()
+        run: |
+          SHORT_SHA="${GITHUB_SHA:0:8}"
+          echo "✅ Ops Console deployed successfully (${SHORT_SHA})"
+          # TODO: Post to Teams via Morris webhook when webhook URL is configured
+
+      - name: Notify Teams (failure)
+        if: failure()
+        run: |
+          SHORT_SHA="${GITHUB_SHA:0:8}"
+          echo "❌ Ops Console deployment failed (${SHORT_SHA})"
+          # TODO: Post to Teams via Morris webhook when webhook URL is configured
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

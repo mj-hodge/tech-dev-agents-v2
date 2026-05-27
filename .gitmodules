@@ -1,0 +1,3 @@
+[submodule ".sdlc"]
+	path = .sdlc
+	url = https://github.com/hpi-gorillacommerce/sdlc-framework.git

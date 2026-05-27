@@ -1,0 +1,35 @@
+# AGENTS.md — Agent Operational Guidance
+
+## Teams Presence Management
+
+Agents MUST update their Teams presence when running Claude Code SDK sessions so team members can see agent utilization at a glance.
+
+### Before running the Claude Code SDK
+
+```bash
+python3 scripts/presence_manager.py start --story STORY-XXX
+```
+
+This sets the agent's Teams status to **Busy** with the message "Working on STORY-XXX". A background thread refreshes the Busy state every 5 minutes so it persists through long sessions.
+
+### After the session ends
+
+```bash
+python3 scripts/presence_manager.py stop
+```
+
+This sets the agent's status back to **Available** and stops the refresh thread.
+
+### Required Environment Variables
+
+| Variable | Purpose |
+|----------|---------|
+| `GRAPH_ACCESS_TOKEN` | Microsoft Graph API bearer token (already provisioned) |
+| `GRAPH_USER_ID` | Azure AD user/app ID for the agent |
+| `CURRENT_STORY` | *(Optional)* Fallback story ID if `--story` is not passed |
+
+### Behavior Notes
+
+- **Debounce:** Rapid calls within 30 seconds are suppressed to prevent presence flicker.
+- **Auto-expiry:** Presence expires after 10 minutes if not refreshed (safety net if stop is missed).
+- **Graceful fallback:** If `GRAPH_ACCESS_TOKEN` is missing, the script logs a warning and does not crash.

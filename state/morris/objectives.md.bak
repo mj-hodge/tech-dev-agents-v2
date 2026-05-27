@@ -1,0 +1,164 @@
+# Objectives & Backlog — Last Updated: 2026-04-16T04:16 PM ET
+
+## Team Objectives
+
+### Primary — SDLC Remediation Across All Repos
+- **Status:** Active — SDLC remediation stories dispatched across all repos
+- **Queue:** STORY-316 (Dan, advertising-amazon), STORY-313/314/315/317 pending
+- **Pattern:** Retroactive SDLC deliverables for all merged PRs missing them
+- **Gate:** GITLEAKS_LICENSE still needed for CI on advertising-amazon PRs
+
+### Secondary — EPICs 004/005/006 (advertising-amazon)
+- **Status:** Q&A session started on 2026-04-15 with Nik (ad ops)
+- **Business Answers Captured:**
+  - ACoS: Calculate breakeven ACoS, then apply a down-multiplier. Varies by campaign type & product margin. Higher margin → higher ACoS tolerance.
+  - Bids: Amazon's bid recommendations used as sanity check, not the source of truth.
+  - Bid strategy: Different bids per campaign type — separate into distinct campaigns; campaign logic analysis dictates spend allocation.
+  - Format: New artifact; lowest friction = Mark talking through logic conversationally (option B chosen)
+- **Next:** Continue Q&A to reach 80% DECIDED gate before sub-story dispatch
+
+### Tertiary — Product Health Dashboard
+- **Status:** STORY-035 (RBAC) has been churning — 14 failures overnight, Mark cancelled STORY-036-039
+- **STORY-314:** Pending retry for SDLC remediation on PR #12
+- **STORY-317:** Pending retroactive SDLC for merged stories (057-061) missing deliverables
+- **Systemic issue:** Product-health-dashboard stories fail repeatedly — likely missing deps or CI config
+
+### Tech-Dev-Agents Project — Goal (Per Mark)
+- **Plan:**
+  1. Update Morris structure to use Claude Code SDK first — make it repeatable for future agents
+  2. Update dashboard to show Azure Foundry consumption for overage monitoring
+- **Goal:** Build toward a full agentic development team. Need to scale beyond 2 agents eventually.
+- **Azure cost tracking:** Creds are live (ops-console-cost-reader SP). Budget target: <$50/day ideal. Warning severity for alerts, not critical.
+- **Mark's ask:** Morris should make suggestions on how to achieve the scaling goals — this should be in the project summary
+
+### Knowledgebase (tech-gc-knowledgebase)
+- **Structure:** `sources/` (raw landings) + `wiki/` (curated) — layered structure set by Mark
+- **Status:** 58 raw source files, 71 wiki pages, index (159 lines). No ingest since Apr 15.
+- **Mark's directive:** Pull latest daily. Mark has made structure changes (raw vs curated).
+
+### Operational
+- CI/CD monitoring — detect and surface failures automatically
+- Fleet health — agents processing, no stale queues
+- Story lifecycle tracking — zero stories falling through cracks
+- **SDLC enforcement is CRITICAL** — Morris's primary ongoing job
+
+## KPIs
+| Metric | Target |
+|--------|--------|
+| Story throughput | ≥ 3 stories merged/week per agent |
+| PR merge time | < 24h Small, < 48h Medium/Large |
+| CI pass rate | 100% on new PRs |
+| Stories falling through | 0 |
+| Fleet uptime | 99%+ |
+
+---
+
+## Backlog (Priority Order)
+
+### 🔴 P1 — Active Dispatch Queue
+| Story | Repo | Agent | Status |
+|-------|------|-------|--------|
+| STORY-316 | advertising-amazon | Dan | Claimed by Dan — SDLC remediation for merged stories |
+| STORY-313 | advertising-amazon | — | Pending retry 1/3 — SDLC remediation PR #91 |
+| STORY-314 | product-health-dashboard | — | Pending retry 1/3 — SDLC remediation PR #12 |
+| STORY-315 | tech-dev-agents | — | Pending retry 1/3 — SDLC remediation PR #39 |
+| STORY-317 | product-health-dashboard | — | Pending — retroactive SDLC for merged stories |
+| STORY-336 | tech-dev-agents | Derrick | Claimed — Fix 3 dispatch bugs (claude_sdk_tool.py + dispatch_poller.py) |
+| STORY-330 | tech-gc-knowledgebase | Dan | Claimed — SharePoint gorillaguides ingestion |
+
+### 🟡 P2 — Open PRs (21 total across 5 repos)
+- **advertising-amazon:** 12 PRs (most blocked by gitleaks CI). PR #79 is CI-green candidate for merge.
+- **tech-dev-agents:** 5 PRs — all have Request Changes for SDLC gaps
+- **product-health-dashboard:** 2 PRs — both Large, CI failing
+- **tech-gc-knowledgebase:** 2 PRs — Large, merge conflicts
+- **sourcing-warning-labels:** 1 PR — Medium, human PR (harisgc)
+
+---
+
+## Research — Ongoing Daily (Morris's Job, NOT Dispatched)
+
+PRIMARY FOCUS: Agentic development — are we using the best strategies, patterns, and tools?
+This is a multi-day rolling investigation, not a one-shot article. Find things → deep-dive next day → evaluate → bring findings to Mark.
+
+**Mark has said this MULTIPLE TIMES:** "I want to be sure we're using the best strategies, patterns and tools for our agentic development. We've been figuring a lot as we go and not looking to see what's out there." This is NOT optional or low-priority — it's Morris's ongoing daily responsibility.
+
+### Agentic Dev Research (Active — Multi-Day)
+
+| Day | Focus | Status |
+|-----|-------|--------|
+| Day 1 | Landscape scan — what multi-agent frameworks exist (CrewAI, AutoGen, LangGraph, Swarm, OpenHands, SWE-Agent, Devin, Factory) | ✅ Complete — 01-landscape-scan.md pushed 2026-04-16 |
+| Day 2 | Deep-dive top 2-3 most relevant frameworks — install, test, evaluate against our setup | 🔄 In Progress — Claude Code running deep-dive on Claude Agent Teams, LangGraph, and one more framework. Kicked off ~20:15 UTC Apr 16 |
+| Day 3 | Orchestration patterns — centralized dispatch vs event-driven vs hierarchical. Rate limit handling. | Pending |
+| Day 4 | Missing tools — MCP servers, vector memory, observability (LangSmith, Braintrust), sandboxing | Pending |
+| Day 5 | Gap analysis — our setup vs best practices. Prioritized recommendations. | Pending |
+
+### Secondary Research Topics (Queue)
+
+| # | Topic | Why |
+|---|-------|-----|
+| 1 | MCP ecosystem & emerging patterns | Spec evolving — new transports, auth, registries |
+| 2 | LLM cost optimization | Prompt caching, model routing, token reduction |
+| 3 | AI code review tools landscape | CodeRabbit, Codium, Qodo — cost/quality tradeoffs |
+| 4 | Azure Container Apps vs ACI | Container Apps offers scaling, Dapr, revisions |
+| 5 | Structured logging (Python/FastAPI) | Standardize log format, correlation IDs for Loki |
+
+---
+
+## SDLC Enforcement — Morris's Responsibilities
+
+Morris is the orchestrator/dispatcher. Agents execute phases; Morris ensures the framework is followed before, during, and after.
+
+### Phase Paths by Scope (Non-Negotiable)
+
+| Scope | Path |
+|-------|------|
+| Trivial | 8 → Done |
+| Small | 1 → 7 → 8 → Done |
+| Medium | 1 → 4 → 6 → [6b, 6c, 6d] → 7 → 8 → 8b → 11 → Done |
+| Large/New | 1 → 2 → 3 → 4 → 5 → 6 → [6b, 6c, 6d] → 7 → 8 → 8b → 11 → [9, 10] → Done |
+| Epic | 1 → decompose → per-story SDLC → [E2E gate] → Retrospective → Done |
+
+Brackets `[A, B, C]` = parallel phases. Skipping phases is not allowed.
+
+### Gate Phases (Hard Stop — Explicit Approval Required)
+
+| Phase | Gate | What to Check Before Approving |
+|-------|------|-------------------------------|
+| 1 (Seed) | Scope correct, ACs complete, risk identified | `features/story-XXX-slug/seed.md` exists and is thorough |
+| 8 (Implementation) | Tests GREEN, code matches spec, no regressions | All tests pass, `git diff` reviewed, deliverables present |
+| 11 (Pre-Deploy) | All 11 checks pass, `predeploy-gate.md` shows PASS | Report exists, no FAIL/BLOCKED items, sign-off section present |
+
+### Confirm Phases (Ask "Proceed?" — Wait for Yes/No)
+Phases 2, 3, 4, 5, 6, 7, 9, 10 — agent must ask before advancing.
+
+### Auto-Advance Phases
+Phases 6b, 6c, 8b — proceed immediately after completion.
+
+### Every Phase Must Update (Atomic — All Four Together)
+1. `.project` — Phase Routing table (Completed Phases, Current Phase, Current Status, Next Phase, Last Updated)
+2. `backlog.md` — Story status, acceptance criteria progress
+3. `development-tasks.md` — Task statuses
+4. Task tracker (Asana/Monday.com) — Move card + post phase summary comment
+
+### Dispatch Checklist (Run before dispatching ANY story)
+
+- [ ] **Seed exists?** — `features/story-XXX-slug/seed.md` present? If scope requires it (Small+) and missing → run Phase 1 first
+- [ ] **SDLC submodule?** — Repo has `.sdlc` submodule pointing to sdlc-framework? If not → flag to Mark
+- [ ] **Tracking docs exist?** — Repo has `.project`, `backlog.md`, `development-tasks.md`? If not → flag; cannot dispatch without them
+- [ ] **Scope determined?** — Seed identified scope as Trivial/Small/Medium/Large? This determines the phase path
+- [ ] **Phase path in .project?** — `.project` Phase Routing has correct Scope Path for the determined scope?
+- [ ] **Dispatch prompt complete?** — Includes: story ID, scope, phase path, SDLC compliance requirements, pointer to `features/story-XXX-slug/seed.md`
+
+### PR Review SDLC Checklist
+
+| Scope | Required Deliverables in `features/story-XXX-slug/` |
+|-------|-----------------------------------------------------|
+| Small | `seed.md`, `test-design.md` |
+| Medium | `seed.md`, `analysis.md`, `feature-spec.md`, `security-review.md`, `ux-review.md`, `ops-review.md`, `test-design.md`, `code-review.md`, `predeploy-gate.md` |
+| Large | All Medium + `research.md`, `expansion.md`, `selection.md`, `specification.md`, `architecture.md`, `api-design.md`, `database-schema.md`, `implementation-plan.md`, `refinement-report.md`, `site-reliability.md` |
+
+### Fleet-Vigilance SDLC Checks (Every 15 min via heartbeat)
+- Phase deliverables on disk match claimed progress in `.project`
+- No stories stuck >2 hours without phase advancement
+- Cross-repo consistency of tracking docs
+- Zero-tolerance: no direct DB writes, no external API calls from tests, no agent-triggered deploys, no secrets in code

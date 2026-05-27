@@ -1,0 +1,15 @@
+{
+  "generated_at": "2026-05-04T20:40:33Z",
+  "generated_by": "push-code.sh",
+  "files": {
+    "/opt/agent/dispatch_poller.py": "4079ee68882bc4291b952028efac0978",
+    "/opt/agent/dispatch_poller_v2.py": "f1dbb13ab9de094aa27d5f3ef114d4ce",
+    "/opt/agent/sdlc_phase_runner.py": "1b3c43d32b5551d9ac77228829ce4b66",
+    "/opt/agent/adversarial_reviewer.py": "9c570b932c009c3eaeafb69ee57a7255",
+    "/opt/agent/claude_sdk_tool.py": "587c017398d9a30a57e03ea976b15ef7",
+    "/opt/agent/run_dispatch_poller.py": "aed1add5f2342bbfa308761d0ea73f43",
+    "/opt/agent/terminal_guard.py": "51d4ac8e5826b5dda312ed76ff349ceb",
+    "/opt/agent/project_file.py": "8baf5ca7d98ad4ecb5ffa04c2c014486",
+    "/opt/agent/drain_leases.py": "c8fc65f336f42afe7eb841965471aa78"
+  }
+}

@@ -1,0 +1,277 @@
+# STORY-507 AC-9: Grafana alert rules for phase duration, failure rate,
+# and partial-PR detection.
+#
+# These rules derive metrics from structured JSON log events emitted by
+# sdlc_phase_runner.py and ingested by Promtail → Loki.
+#
+# Provisioning: place this file in Grafana's alerting provisioning directory
+# or import via the Grafana API.
+
+groups:
+  - name: dispatch_sdlc_alerts
+    interval: 5m
+    rules:
+      # ------------------------------------------------------------------
+      # Phase Duration Warning — 30 minutes (1800s)
+      # ------------------------------------------------------------------
+      - uid: phase-duration-warning
+        title: "SDLC Phase Duration Warning (>30 min)"
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: loki
+            model:
+              expr: |
+                sum by (story_id, agent, phase) (
+                  last_over_time(
+                    {job="dispatch-poller"} | json | event="phase_end"
+                    | unwrap duration_s [10m]
+                  )
+                )
+          - refId: C
+            datasourceUid: "__expr__"
+            model:
+              type: threshold
+              conditions:
+                - evaluator:
+                    params: [1800]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+                  reducer:
+                    type: last
+        for: 0s
+        annotations:
+          summary: "Phase {{ $labels.phase }} for {{ $labels.story_id }} exceeded 30 minutes"
+          description: >
+            Agent {{ $labels.agent }} has been running phase {{ $labels.phase }}
+            for {{ $values.C.Value }}s (threshold: 1800s).
+            This may indicate the agent is stuck or rate-limited.
+
+      # ------------------------------------------------------------------
+      # Phase Duration Critical — 60 minutes (3600s)
+      # ------------------------------------------------------------------
+      - uid: phase-duration-critical
+        title: "SDLC Phase Duration Critical (>60 min)"
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: loki
+            model:
+              expr: |
+                sum by (story_id, agent, phase) (
+                  last_over_time(
+                    {job="dispatch-poller"} | json | event="phase_end"
+                    | unwrap duration_s [10m]
+                  )
+                )
+          - refId: C
+            datasourceUid: "__expr__"
+            model:
+              type: threshold
+              conditions:
+                - evaluator:
+                    params: [3600]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+                  reducer:
+                    type: last
+        for: 0s
+        annotations:
+          summary: "Phase {{ $labels.phase }} for {{ $labels.story_id }} exceeded 60 minutes (CRITICAL)"
+          description: >
+            Agent {{ $labels.agent }} has been running phase {{ $labels.phase }}
+            for {{ $values.C.Value }}s (threshold: 3600s).
+            Consider SIGTERM to gracefully pause and resume on another agent.
+
+      # ------------------------------------------------------------------
+      # Dispatch Failure Rate — >20% of dispatches failing
+      # ------------------------------------------------------------------
+      - uid: dispatch-failure-rate
+        title: "Dispatch Failure Rate >20%"
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: loki
+            model:
+              expr: |
+                sum(count_over_time(
+                  {job="dispatch-poller"} | json | event="phase_end" | status="failure" [1h]
+                ))
+          - refId: B
+            datasourceUid: loki
+            model:
+              expr: |
+                sum(count_over_time(
+                  {job="dispatch-poller"} | json | event="phase_end" [1h]
+                ))
+          - refId: C
+            datasourceUid: "__expr__"
+            model:
+              type: math
+              expression: "$A / $B"
+        for: 5m
+        annotations:
+          summary: "Dispatch failure rate is above 20% threshold (0.2)"
+          description: >
+            More than 20% (0.2) of dispatched phases are failing in the last hour.
+            Check agent logs for error patterns. Failure rate: {{ $values.C.Value | printf "%.2f" }}.
+
+      # ------------------------------------------------------------------
+      # Partial PR Detection — PR created but fewer phases than expected
+      # ------------------------------------------------------------------
+      - uid: partial-pr-rate
+        title: "Partial PR Detected (phases incomplete)"
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: loki
+            model:
+              expr: |
+                sum by (story_id) (
+                  count_over_time(
+                    {job="dispatch-poller"} | json | event="phase_end" | status="success" [6h]
+                  )
+                )
+          - refId: B
+            datasourceUid: loki
+            model:
+              expr: |
+                count_over_time(
+                  {job="dispatch-poller"} | json | event="pr_created" [6h]
+                )
+          - refId: C
+            datasourceUid: "__expr__"
+            model:
+              type: reduce
+              expression: $B
+              reducer: last
+        for: 0s
+        noDataState: NoData
+        annotations:
+          summary: "PR created for {{ $labels.story_id }} with possible incomplete phases"
+          description: >
+            A pull request was created but the phase completion count is lower than
+            expected. This may indicate a partial run where some phases were skipped
+            or failed silently. Review the PR for missing deliverables.
+
+  # ============================================================
+  # STORY-916: Queue Health SLOs — Postgres-native alert rules
+  # Three predicates surfacing queue leaks within minutes.
+  # ============================================================
+  - name: queue_health_slos
+    interval: 1m
+    rules:
+
+      # ------------------------------------------------------------------
+      # Alert 1 — Stuck Claimed (PAGE)
+      # Fires when a job sits in state='claimed' for >30 minutes
+      # without forward progress.
+      # ------------------------------------------------------------------
+      - uid: queue-stuck-claimed
+        title: "Dispatch: Stuck Claimed > 30m"
+        condition: C
+        labels:
+          severity: page
+          notification_channel: dispatch-ops
+        data:
+          - refId: A
+            datasourceUid: grafana-postgresql-datasource
+            model:
+              rawSql: "SELECT COUNT(*) AS stuck_count FROM dispatch_state_current WHERE state = 'claimed' AND now() - updated_at > interval '30 minutes' HAVING COUNT(*) > 0"
+              format: table
+          - refId: C
+            datasourceUid: "__expr__"
+            model:
+              type: threshold
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+                  reducer:
+                    type: last
+        for: 0s
+        annotations:
+          summary: "{{ $values.C.Value }} job(s) stuck in claimed state > 30 min — check Grafana dashboard"
+          runbook_url: "https://github.com/org/tech-dev-agents/blob/main/data-remediations/queue-stuck-claimed-runbook.md"
+
+      # ------------------------------------------------------------------
+      # Alert 2 — Unlinked in_review (WARN)
+      # Fires when a job is in state='in_review' for >60 minutes
+      # without a pr_number (GitHub API miss or backfill gap).
+      # ------------------------------------------------------------------
+      - uid: queue-unlinked-in-review
+        title: "Dispatch: Unlinked in_review > 60m"
+        condition: C
+        labels:
+          severity: warning
+          notification_channel: dispatch-ops
+        data:
+          - refId: A
+            datasourceUid: grafana-postgresql-datasource
+            model:
+              rawSql: "SELECT COUNT(*) AS unlinked_count FROM dispatch_state_current JOIN dispatch_jobs ON dispatch_state_current.job_id = dispatch_jobs.job_id WHERE dispatch_state_current.state = 'in_review' AND dispatch_jobs.pr_number IS NULL AND now() - updated_at > interval '60 minutes' HAVING COUNT(*) > 0"
+              format: table
+          - refId: C
+            datasourceUid: "__expr__"
+            model:
+              type: threshold
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+                  reducer:
+                    type: last
+        for: 0s
+        annotations:
+          summary: "{{ $values.C.Value }} job(s) in in_review with no pr_number > 60 min — check Grafana dashboard"
+          runbook_url: "https://github.com/org/tech-dev-agents/blob/main/data-remediations/queue-unlinked-in-review-runbook.md"
+
+      # ------------------------------------------------------------------
+      # Alert 3 — Redispatch Loop (WARN)
+      # Fires when a correlation_key accumulates >3 redispatched events
+      # within 24 hours (agent repeatedly failing).
+      # ------------------------------------------------------------------
+      - uid: queue-redispatch-loop
+        title: "Dispatch: Redispatch Loop (>3 in 24h)"
+        condition: C
+        labels:
+          severity: warning
+          notification_channel: dispatch-ops
+        data:
+          - refId: A
+            datasourceUid: grafana-postgresql-datasource
+            model:
+              rawSql: "SELECT correlation_key, COUNT(*) AS dispatch_count FROM dispatch_v2_events WHERE event_type = 'redispatched' AND created_at > now() - INTERVAL '24 hours' AND correlation_key IS NOT NULL GROUP BY correlation_key HAVING COUNT(*) > 3"
+              format: table
+          - refId: C
+            datasourceUid: "__expr__"
+            model:
+              type: threshold
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+                  reducer:
+                    type: last
+        for: 0s
+        annotations:
+          summary: "{{ $values.C.Value }} correlation_key(s) redispatched >3 times in 24h — check Grafana dashboard"
+          runbook_url: "https://github.com/org/tech-dev-agents/blob/main/data-remediations/queue-redispatch-loop-runbook.md"

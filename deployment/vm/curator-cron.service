@@ -1,0 +1,30 @@
+# curator-cron.service — STORY-340
+# Weekly Cole the Curator trigger (paired with curator-cron.timer)
+#
+# Install: sudo cp curator-cron.{service,timer} /etc/systemd/system/
+#          sudo systemctl daemon-reload
+#          sudo systemctl enable --now curator-cron.timer
+
+[Unit]
+Description=Cole the Curator — weekly curation trigger
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=hermes
+Group=hermes
+ExecStart=/home/hermes/deployment/vm/curator-cron.sh
+Environment=OPS_CONSOLE_URL=http://localhost:8080
+EnvironmentFile=-/home/hermes/.env
+
+# Security hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/home/hermes/state/morris
+
+# Timeout: 5 minutes (should complete in seconds)
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,284 @@
+id: /subscriptions/d0f0feff-78ef-4425-9d51-07f5e0f0bcba/resourceGroups/rg-tech-dev-agents-dev/providers/Microsoft.App/containerapps/ca-tech-dev-agents-dev
+identity:
+  type: UserAssigned
+  userAssignedIdentities:
+    ? /subscriptions/d0f0feff-78ef-4425-9d51-07f5e0f0bcba/resourcegroups/rg-tech-dev-agents-dev/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-tech-dev-agents-dev
+    : clientId: 9605189d-cbe6-466c-bdb5-d1beb6408684
+      principalId: aa0343b8-945e-444b-aa51-30aec91fea17
+location: East US
+name: ca-tech-dev-agents-dev
+properties:
+  configuration:
+    activeRevisionsMode: Single
+    dapr: null
+    identitySettings: []
+    ingress:
+      additionalPortMappings: null
+      allowInsecure: false
+      clientCertificateMode: null
+      corsPolicy: null
+      customDomains: null
+      exposedPort: 0
+      external: true
+      fqdn: ca-tech-dev-agents-dev.yellowdune-d31b2d4f.eastus.azurecontainerapps.io
+      ipSecurityRestrictions: null
+      stickySessions: null
+      targetPort: 8080
+      traffic:
+      - latestRevision: true
+        weight: 100
+      transport: Auto
+    maxInactiveRevisions: 100
+    registries:
+    - identity: /subscriptions/d0f0feff-78ef-4425-9d51-07f5e0f0bcba/resourcegroups/rg-tech-dev-agents-dev/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-tech-dev-agents-dev
+      passwordSecretRef: ''
+      server: acrtechdevagentsdev.azurecr.io
+      username: ''
+    runtime: null
+    secrets:
+    - name: anthropic-api-key
+    - identity: /subscriptions/d0f0feff-78ef-4425-9d51-07f5e0f0bcba/resourcegroups/rg-tech-dev-agents-dev/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-tech-dev-agents-dev
+      keyVaultUrl: https://kv-tech-dev-agents-dev.vault.azure.net/secrets/bot-app-id
+      name: bot-app-id
+    - identity: /subscriptions/d0f0feff-78ef-4425-9d51-07f5e0f0bcba/resourcegroups/rg-tech-dev-agents-dev/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-tech-dev-agents-dev
+      keyVaultUrl: https://kv-tech-dev-agents-dev.vault.azure.net/secrets/bot-app-password
+      name: bot-app-password
+    - identity: /subscriptions/d0f0feff-78ef-4425-9d51-07f5e0f0bcba/resourcegroups/rg-tech-dev-agents-dev/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-tech-dev-agents-dev
+      keyVaultUrl: https://kv-tech-dev-agents-dev.vault.azure.net/secrets/foundry-api-key
+      name: foundry-api-key
+    - identity: /subscriptions/d0f0feff-78ef-4425-9d51-07f5e0f0bcba/resourcegroups/rg-tech-dev-agents-dev/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-tech-dev-agents-dev
+      keyVaultUrl: https://kv-tech-dev-agents-dev.vault.azure.net/secrets/foundry-endpoint
+      name: foundry-endpoint
+    - name: github-token
+    service: null
+  customDomainVerificationId: B42C3666363627A9FA809D7F0B888A2EF05AF1B7EB417B8DB6083BECAA72C398
+  delegatedIdentities: []
+  environmentId: /subscriptions/d0f0feff-78ef-4425-9d51-07f5e0f0bcba/resourceGroups/rg-tech-dev-agents-dev/providers/Microsoft.App/managedEnvironments/cae-tech-dev-agents-dev
+  eventStreamEndpoint: https://eastus.azurecontainerapps.dev/subscriptions/d0f0feff-78ef-4425-9d51-07f5e0f0bcba/resourceGroups/rg-tech-dev-agents-dev/containerApps/ca-tech-dev-agents-dev/eventstream
+  latestReadyRevisionName: ca-tech-dev-agents-dev--0000057
+  latestRevisionFqdn: ca-tech-dev-agents-dev--0000057.yellowdune-d31b2d4f.eastus.azurecontainerapps.io
+  latestRevisionName: ca-tech-dev-agents-dev--0000057
+  managedEnvironmentId: /subscriptions/d0f0feff-78ef-4425-9d51-07f5e0f0bcba/resourceGroups/rg-tech-dev-agents-dev/providers/Microsoft.App/managedEnvironments/cae-tech-dev-agents-dev
+  outboundIpAddresses:
+  - 20.231.246.122
+  - 20.231.246.54
+  - 20.231.247.19
+  - 20.231.246.253
+  - 20.241.227.6
+  - 20.241.226.169
+  - 40.121.19.74
+  - 40.121.19.40
+  - 40.121.18.62
+  - 40.121.18.244
+  - 40.121.19.105
+  - 40.121.18.246
+  - 40.121.18.166
+  - 40.121.18.60
+  - 40.121.18.21
+  - 40.121.18.44
+  - 40.121.18.41
+  - 40.121.18.248
+  - 40.121.18.82
+  - 40.121.19.108
+  - 40.121.19.125
+  - 40.121.18.46
+  - 40.117.125.130
+  - 40.121.18.52
+  - 40.121.18.33
+  - 40.121.18.238
+  - 40.121.19.2
+  - 40.121.19.122
+  - 40.121.19.19
+  - 40.121.18.114
+  - 40.121.18.255
+  - 40.121.18.164
+  - 40.117.121.106
+  - 40.121.18.27
+  - 40.121.18.156
+  - 40.121.18.117
+  - 40.121.18.197
+  - 40.121.18.133
+  - 40.121.18.112
+  - 40.121.18.106
+  - 40.121.19.89
+  - 40.121.19.83
+  - 40.121.18.131
+  - 40.121.18.201
+  - 40.121.18.170
+  - 40.121.18.242
+  - 13.92.130.42
+  - 40.121.19.42
+  - 40.121.18.73
+  - 40.121.18.43
+  - 51.8.12.17
+  - 4.156.180.142
+  - 20.242.162.124
+  - 52.188.24.146
+  - 135.234.194.233
+  - 74.179.252.92
+  - 20.75.182.233
+  - 52.188.26.111
+  - 4.157.110.133
+  - 128.203.66.61
+  - 4.157.233.139
+  - 4.246.249.6
+  - 20.168.207.180
+  - 172.210.105.164
+  - 52.142.22.120
+  - 52.226.252.104
+  - 172.212.65.206
+  - 52.249.211.77
+  - 52.224.151.170
+  - 20.237.50.56
+  - 4.246.255.52
+  - 52.249.202.205
+  - 135.237.72.218
+  - 40.76.168.71
+  - 20.127.248.50
+  - 20.241.171.30
+  - 20.241.172.248
+  - 20.241.172.250
+  - 20.246.203.138
+  - 20.246.203.140
+  - 13.82.216.169
+  - 13.82.216.172
+  - 13.82.216.149
+  - 52.170.33.171
+  - 20.169.229.88
+  - 20.169.229.46
+  - 20.169.229.29
+  - 20.169.229.38
+  - 20.169.229.62
+  - 20.169.229.109
+  - 20.169.229.92
+  - 20.169.229.27
+  - 20.169.229.51
+  - 20.169.229.42
+  - 48.216.192.198
+  - 40.90.243.232
+  - 40.90.242.126
+  - 135.237.112.47
+  - 51.8.74.190
+  - 4.157.197.142
+  - 172.210.91.191
+  - 172.210.90.42
+  - 40.90.243.227
+  - 40.90.243.72
+  - 52.234.235.220
+  - 57.152.55.92
+  - 172.212.36.156
+  - 172.210.121.45
+  - 172.214.2.208
+  - 51.8.15.68
+  - 172.210.90.119
+  - 134.33.213.81
+  - 128.203.83.220
+  - 20.241.192.93
+  - 172.212.121.150
+  - 172.171.186.158
+  - 52.249.213.152
+  - 74.179.213.114
+  - 4.246.239.152
+  - 4.156.216.65
+  - 4.157.231.174
+  - 172.171.168.136
+  - 20.185.213.14
+  - 135.237.23.77
+  - 20.75.154.200
+  - 20.121.176.173
+  - 52.188.183.58
+  - 52.226.222.18
+  - 52.170.171.70
+  - 52.152.194.127
+  - 20.242.207.230
+  - 52.224.224.85
+  - 52.224.187.13
+  - 20.253.99.205
+  - 48.216.151.10
+  - 172.171.52.9
+  - 20.232.216.204
+  - 57.152.80.247
+  - 20.237.45.193
+  - 74.179.184.211
+  - 52.142.22.78
+  - 172.212.53.114
+  - 172.212.65.70
+  - 20.241.193.184
+  - 20.241.211.237
+  - 20.121.103.252
+  - 20.241.183.150
+  - 20.168.206.195
+  - 20.242.232.14
+  - 57.152.50.21
+  - 20.237.112.190
+  provisioningState: Succeeded
+  runningStatus: Running
+  template:
+    containers:
+    - env:
+      - name: HERMES_HOME
+        value: /home/hermes/.hermes
+      - name: OPENAI_API_KEY
+        secretRef: foundry-api-key
+      - name: OPENAI_BASE_URL
+        secretRef: foundry-endpoint
+      - name: MicrosoftAppId
+        secretRef: bot-app-id
+      - name: MicrosoftAppPassword
+        secretRef: bot-app-password
+      - name: BOT_NAME
+        value: dan
+      - name: BOT_EMAIL
+        value: tech-agent-dan@gorillacommerce.co
+      - name: CLAUDE_CODE_USE_BEDROCK
+        value: '0'
+      - name: LOKI_URL
+        value: https://grafana.gorillacommerce.ai
+      - name: LOKI_ENV
+        value: dev
+      - name: DUMMY_NOOP
+        value: '1'
+      - name: GH_TOKEN
+        secretRef: github-token
+      - name: GITHUB_TOKEN
+        secretRef: github-token
+      image: acrtechdevagentsdev.azurecr.io/hermes-agent:dan-v5-20260327-174320
+      name: ca-tech-dev-agents-dev
+      resources:
+        cpu: 1.0
+        ephemeralStorage: 4Gi
+        memory: 2Gi
+      volumeMounts:
+      - mountPath: /home/hermes/.claude
+        subPath: claude-credentials
+        volumeName: dan-persistent
+      - mountPath: /home/hermes/workspace
+        subPath: workspace
+        volumeName: dan-persistent
+      - mountPath: /mnt/persist
+        subPath: hermes-state
+        volumeName: dan-persistent
+    initContainers: null
+    revisionSuffix: ''
+    scale:
+      cooldownPeriod: 300
+      maxReplicas: 1
+      minReplicas: 1
+      pollingInterval: 30
+      rules: null
+    serviceBinds: null
+    terminationGracePeriodSeconds: null
+    volumes:
+    - name: dan-persistent
+      storageName: danpersistent
+      storageType: AzureFile
+  workloadProfileName: Consumption
+resourceGroup: rg-tech-dev-agents-dev
+systemData:
+  createdAt: '2026-03-26T19:01:34.0859976'
+  createdBy: moreta@gorillacommerce.co
+  createdByType: User
+  lastModifiedAt: '2026-03-27T22:06:16.0106499'
+  lastModifiedBy: moreta@gorillacommerce.co
+  lastModifiedByType: User
+type: Microsoft.App/containerApps

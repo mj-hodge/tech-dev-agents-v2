@@ -1,0 +1,35 @@
+# Pinned snapshot of gc-data-v2/sources.yaml for deterministic testing.
+# SHA: fixture-only (not a real repo SHA)
+sources:
+  amazon-sp-api:
+    repo: hpi-gorillacommerce/amazon-sp-api-v2
+    auth_method: OAuth 2.0 (LWA)
+    status: active
+  amazon-ads-api:
+    repo: hpi-gorillacommerce/amazon-ads-api-v2
+    auth_method: OAuth 2.0 (LWA)
+    status: active
+  walmart-supplier:
+    repo: hpi-gorillacommerce/walmart-supplier-v2
+    auth_method: OAuth 2.0 (generic)
+    status: active
+  walmart-ad-connect:
+    repo: hpi-gorillacommerce/walmart-ad-connect-v2
+    auth_method: OAuth 2.0 (generic)
+    status: active
+  shopify:
+    repo: hpi-gorillacommerce/shopify-v2
+    auth_method: API key
+    status: active
+  levanta:
+    repo: hpi-gorillacommerce/levanta-v2
+    auth_method: API key
+    status: active
+  toolio:
+    repo: hpi-gorillacommerce/toolio-v2
+    auth_method: API key
+    status: active
+  netsuite:
+    repo: hpi-gorillacommerce/netsuite-v2
+    auth_method: Token-based
+    status: active

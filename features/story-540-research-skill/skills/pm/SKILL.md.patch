@@ -1,0 +1,21 @@
+--- a/.sdlc/skills/pm/SKILL.md
++++ b/.sdlc/skills/pm/SKILL.md
+@@ -48,3 +48,18 @@ Key rules:
+ - Ranges for timelines, not point estimates
+ - Always mention blockers if they exist
+ - Read-only — never modify files or advance phases
++
++## Research Delegation
++
++Before answering a research-heavy question in-session, evaluate whether it should be
++dispatched to an agent instead.
++
++**Definition of research:** Pure information retrieval, audit, tradeoff analysis, codebase
++survey, or exploration that produces a written document — no code change committed.
++
++**Threshold:** If you estimate the research would take > ~10 turns to complete thoroughly,
++stop and dispatch via `/research` instead of proceeding in-session.
++
++**Action:** Invoke `/research "<the user's question>"` — this dispatches the work to an
++available agent (daisy/devon) who will write findings to a feature branch. Your token spend
++drops from ~200K (doing it yourself) to ~5K (the dispatch call). Keep your quota for PM work.

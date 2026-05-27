@@ -1,0 +1,2172 @@
+diff --git a/.project b/.project
+index 1232553f..5a7e90e7 100644
+--- a/.project
++++ b/.project
+@@ -85,6 +85,7 @@
+ | STORY-311 | jack phillips (jack-phillips-main) | small | Done | complete | main |
+ | STORY-400 | jack phillips (jack-phillips-main) | small | Done | complete | story-400/filter-walmart-from-stg-celigo |
+ | STORY-356 | jack phillips (jack-phillips-main) | small | 8 | complete | story-356/seed |
++| STORY-094 | @claude-agent | small | 8 | phase_8_complete | story-094/keyword-bids-batch-sync |
+ 
+ > **On phase completion:** Move current phase to Completed Phases, set Next Phase as Current Phase, set Current Status to `in_progress`. When user says "continue", "next step", or `/next` after `/clear`, read this section to determine what to do.
+ 
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index db8b5f02..ad97d496 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
+ ## [Unreleased]
+ 
+ ### Added
++- STORY-094: `sp_list_keywords` now uses `@cache_first` caching (30-min TTL, 1800 s) with client-side filtering by `ad_group_id`/`campaign_id` — zero live API calls on cache hit. `ads_data_sync.sync_cycle` now fetches all SP keywords per profile in its parallel batch, storing them under the `"sp_list_keywords"` operation key. `hydrate_cache_from_db` also includes `sp_list_keywords` in startup hydration. Added 8 tests covering all 7 ACs.
+ - STORY-398: `inventory_snapshots` table — ASIN-level FBA inventory time-series schema (revision 025)
+   - 13-column table with GENERATED ALWAYS stored `total_quantity` (available + inbound, excludes unfulfillable)
+   - 3 composite indexes: `idx_inv_snap_lookup` (profile/asin/time), `idx_inv_snap_cleanup` (time), `idx_inv_snap_marketplace` (profile/marketplace/time)
+diff --git a/features/story-094-keyword-bids-batch-sync/seed.md b/features/story-094-keyword-bids-batch-sync/seed.md
+index a885921b..68d519dc 100644
+--- a/features/story-094-keyword-bids-batch-sync/seed.md
++++ b/features/story-094-keyword-bids-batch-sync/seed.md
+@@ -1,57 +1,90 @@
+-# STORY-094: Keyword Bids Batch Sync + Cache + Export
++# Seed: STORY-094 — Keyword Bids Batch Sync + Cache + Export
+ 
+-## Problem
++## 1. Problem Statement
+ 
+-Keyword bids are fetched **live from Amazon API on every request** via `sp_list_keywords()` in `src/tools/sp_tools.py`. This violates the project's caching paradigm where the MCP/tool layer acts as a caching layer to avoid rate limits. Keywords are also not included in the campaign export.
++Keyword bids are fetched **live from the Amazon Ads API on every request** via `sp_list_keywords()` in `src/tools/sp_tools.py`. This violates the project's caching paradigm where the MCP/tool layer acts as a read-through cache to avoid rate limits and reduce latency. Every MCP call to list keywords triggers a real API call, consuming rate-limit budget unnecessarily. The 30-minute `ads_data_sync.sync_cycle()` syncs portfolios and SP campaigns but does not include keywords, leaving keyword reads as the only SP GET tool that always hits the live API. Keywords are also absent from campaign exports.
+ 
+-## Current State
++## 2. Target User
+ 
+-- `sp_list_keywords()` (sp_tools.py:479) calls `client.list_sp_keywords()` directly — no cache check
+-- The 30-minute `ads_data_sync.sync_cycle()` only syncs portfolios + SP campaigns
+-- The 2-hour spend refresh cycle does NOT fetch keywords
+-- Campaign export (`/api/bg/campaign-export`) has no keyword data
+-- `sp_list_keywords(profile_id)` with no filters returns ALL keywords for the profile in 1 API call (auto-paginated, up to 5000 via nextToken)
++- **MCP tool consumers** (LLM agents and the admin dashboard) that call `sp_list_keywords` to inspect keyword bids during campaign analysis, bid optimization, and budget allocation workflows
++- **Automated sync infrastructure** — the batch sync loop needs keyword data for cache hydration at startup and periodic refresh
+ 
+-## Requirements
++## 3. Scope Classification
+ 
+-### 1. Add Keywords to Batch Sync Cycle
+-- Add `sp_list_keywords(profile_id)` (no filters = all keywords) to `ads_data_sync.sync_cycle()`
+-- Store in `api_cache` with operation key `"sp_list_keywords"` and TTL matching other sync data (1800s)
+-- Single API call per profile (plus auto-pagination) — minimum API load
++**Small** — follows the exact cache-first pattern already established by `sp_list_campaigns` caching in sp_tools.py and ads_data_sync.py. No new tables, no new endpoints, no new services. Three files modified.
+ 
+-### 2. Cache-First in sp_list_keywords Tool
+-- Add `api_cache.async_get()` check before live API call, matching the pattern in `sp_list_campaigns()` (sp_tools.py:207-223)
+-- When `ad_group_id` or `campaign_id` filters are provided, filter the cached full list client-side
+-- Fall back to live API on cache miss, then cache the result
+-- Return `source: "cache"` / `source: "live_api"` and `cache_age_seconds` in response
++## 4. Phase Path
+ 
+-### 3. Include Keyword Bids in Campaign Export (optional, confirm with user)
+-- Add keyword bid summary data to the campaign export if useful for the Excel workflow
++```
++1 (Seed) → 7 (Test Design) → 8 (Implementation) → 8b (Code Review) → Done
++```
+ 
+-### 4. Tests (MANDATORY)
++## 5. Acceptance Criteria
+ 
+-**All tests MUST mock the Amazon API — zero outbound HTTP calls.**
++1. **AC-1 — Sync cycle includes keywords:** `ads_data_sync.sync_cycle()` fetches all keywords per profile via `sp_list_keywords(profile_id)` with no filters and stores them in `api_cache` with operation key `"sp_list_keywords"` and a 1800-second TTL
++2. **AC-2 — Cache-first read path:** `sp_list_keywords()` in sp_tools.py checks `api_cache.async_get()` before making a live API call; a cache hit returns cached data with zero outbound HTTP calls
++3. **AC-3 — Cache miss fallback:** On cache miss, the tool fetches from the live API, caches the result, and returns data — matching the pattern in `sp_list_campaigns()` (sp_tools.py lines ~207-223)
++4. **AC-4 — Client-side filtering:** When `ad_group_id` or `campaign_id` filters are provided, the tool filters the cached full keyword list client-side rather than making a filtered API call
++5. **AC-5 — Source metadata:** Response payload includes `source` field (`"cache"` | `"live_api"`) and `cache_age_seconds` metadata so callers can assess data freshness
++6. **AC-6 — Zero outbound HTTP in tests:** All tests mock the Amazon Ads API; no real HTTP calls are made during the test suite (enforced by `test_no_outbound_http` assertion)
++7. **AC-7 — Minimum test coverage:** At least 6 test cases covering: cache hit, cache miss + live fetch, client-side filtering, sync cycle inclusion, cache key correctness, and no-outbound-HTTP guard
++8. **AC-8 — Startup hydration:** `hydrate_cache_from_db()` populates keyword data from the `api_entity_cache` DB table into in-memory cache at startup, avoiding API calls on cold start
+ 
+-Required test coverage:
+-- `test_sp_list_keywords_returns_cached_data` — verify cache hit returns cached keywords without API call
+-- `test_sp_list_keywords_cache_miss_fetches_live` — verify live fetch on miss, then caches result
+-- `test_sp_list_keywords_filter_from_cache` — verify campaign_id/ad_group_id filters work on cached data
+-- `test_sync_cycle_fetches_keywords` — verify keywords are included in the sync cycle
+-- `test_sync_cycle_keyword_cache_key` — verify correct cache key format
+-- `test_no_outbound_http` — assert zero real HTTP calls in all tests
++## 6. Technical Notes
+ 
+-## Scope
+-Small — follows the exact pattern already established by `sp_list_campaigns` caching.
++### Pattern to Follow
++- `sp_list_campaigns()` cache-first implementation at sp_tools.py lines ~207-223 — replicate for keywords
++- Cache key: `api_cache` keyed by `("sp_list_keywords", profile_id)` — stores the full unfiltered keyword list
++- Pagination: `sp_list_keywords(profile_id)` with no filters auto-paginates via `nextToken`, returning up to 5000 keywords in a single logical call
+ 
+-## Files to Modify
+-- `src/tools/sp_tools.py` — add cache-first to `sp_list_keywords()`
+-- `src/ingestion/ads_data_sync.py` — add keyword fetch to `sync_cycle()`
+-- `tests/test_sp/test_sp_keywords.py` — add cache tests (or new test file)
++### Sync Cycle Integration
++- Add `_fetch_sp_keywords()` function in ads_data_sync.py following the pattern of `_fetch_campaigns()`
++- Add keyword fetch after the existing ad group fetch in `sync_cycle()` — one API call per profile
++- Add keyword hydration entry to `hydrate_cache_from_db()`
+ 
+-## Coordination with STORY-095
+-STORY-095 introduces a `@cache_first` decorator. If 095 lands first, use the decorator. If 094 goes first, use the manual pattern from `sp_list_campaigns` — STORY-095 will refactor it to the decorator later.
++### Three-Tier Cache Infrastructure
++- In-memory `TtlCache` (`src/cache/ttl_cache.py`) — first check
++- PostgreSQL `api_entity_cache` table (`src/services/entity_cache_service.py`) — persistence / second tier
++- Live Amazon API — last resort
+ 
+-## Dependencies
+-- Existing `api_cache` module (TtlCache + Redis backend)
+-- Existing `ads_data_sync` sync loop
+-- Existing `sp_list_campaigns` cache pattern to copy from
++### Coordination with STORY-095
++STORY-095 introduces a `@cache_first` decorator. If 095 lands first, use the decorator. If 094 lands first, use the manual pattern from `sp_list_campaigns` — STORY-095 will refactor it later.
++
++### Files to Modify
++- `src/tools/sp_tools.py` — add cache-first logic to `sp_list_keywords()`
++- `src/ingestion/ads_data_sync.py` — add `_fetch_sp_keywords()` and keyword entry in `sync_cycle()` + `hydrate_cache_from_db()`
++- `tests/` — new or extended test file for keyword cache tests
++
++### Dependencies
++- Existing `api_cache` module (TtlCache + Redis backend) — `src/cache/ttl_cache.py`
++- Existing `ads_data_sync` sync loop — `src/ingestion/ads_data_sync.py`
++- Existing `sp_list_campaigns` cache pattern — `src/tools/sp_tools.py`
++- Existing `entity_cache_service` for DB persistence — `src/services/entity_cache_service.py`
++- `list_sp_keywords()` on `AdsApiClient` — `src/amazon/ads_client.py`
++
++## 7. Out of Scope
++
++- **Campaign export enrichment:** Adding keyword bid data to `/api/bg/campaign-export` is deferred (optional follow-up, not required for this story)
++- **SB/SD keyword caching:** Only Sponsored Products (SP) keywords are in scope; Sponsored Brands and Sponsored Display are separate stories
++- **`@cache_first` decorator creation:** That is STORY-095's responsibility; this story uses the manual pattern
++- **Keyword bid write operations:** This story is read-only caching; `sp_update_keyword_bid` is unaffected
++- **New database tables or schema migrations:** Uses existing `api_entity_cache` table
++- **Datalake/blob export of keywords:** Out of scope for this story
++
++## 8. Risks & Mitigations
++
++| Risk | Impact | Mitigation |
++|------|--------|------------|
++| Large keyword set (up to 5000) per profile increases sync cycle duration | Sync cycle takes longer than 30-min interval | Single paginated API call; monitor sync duration and adjust interval if needed |
++| Cache key collision with other operations | Stale or wrong data returned | Use distinct operation key `"sp_list_keywords"` matching the tool name convention |
++| Client-side filtering on stale cache | User sees outdated keyword data | 1800s TTL is acceptable; source metadata lets callers assess data age |
++| Rate limit pressure from adding another API call per profile per cycle | Throttling on other calls | Only one additional call per profile per 30-min cycle; rate limiter already in place |
++
++## 9. Estimated Effort
++
++| Component | Estimate |
++|-----------|----------|
++| Cache-first logic in sp_list_keywords | 1 hour |
++| Batch sync addition in ads_data_sync | 1 hour |
++| Tests (6+ test cases, all mocked) | 1-2 hours |
++| **Total** | **3-4 hours** |
+diff --git a/features/story-094-keyword-bids-batch-sync/test-design.md b/features/story-094-keyword-bids-batch-sync/test-design.md
+new file mode 100644
+index 00000000..336a98b1
+--- /dev/null
++++ b/features/story-094-keyword-bids-batch-sync/test-design.md
+@@ -0,0 +1,167 @@
++# STORY-094: Keyword Bids Batch Sync + Cache — Test Design
++
++## Scope
++
++Small story following the existing `@cache_first` pattern. Tests cover the new
++`@cache_first` decorator on `sp_list_keywords` and the `sync_cycle` keyword
++fetch addition.
++
++## Acceptance Criteria → Test Mapping
++
++| AC | Description | Test(s) |
++|----|-------------|---------|
++| AC-1 | `sync_cycle` fetches keywords and caches them under `"sp_list_keywords"` | `test_sync_cycle_fetches_and_caches_keywords` |
++| AC-2 | Cache hit returns without calling Amazon API | `test_cache_hit_returns_cached_keywords`, `test_no_outbound_http_on_cache_hit` |
++| AC-3 | Cache miss calls live API, caches result, second call is cache hit | `test_cache_miss_calls_live_api_and_caches` |
++| AC-4 | `ad_group_id`/`campaign_id` filters applied client-side from cache | `test_filter_by_ad_group_id_uses_cache_not_api`, `test_filter_by_campaign_id_uses_cache_not_api` |
++| AC-5 | Response includes `source` and `cache_age_seconds` | `test_response_metadata_fields` |
++| AC-6 | Zero outbound HTTP calls in all tests | All tests mock `ads_client`; `test_no_outbound_http_on_cache_hit` patches httpx |
++| AC-7 | ≥6 test cases covering all required scenarios | 8 tests total |
++
++## Test Cases
++
++### TC-1: `test_cache_hit_returns_cached_keywords` (AC-2)
++
++**Scenario:** In-memory TtlCache already has keyword data.
++
++**Setup:**
++- Pre-populate TtlCache with keyword list under operation `"sp_list_keywords"`
++- Mock `ads_client` — `list_sp_keywords` will raise if called
++
++**Assertions:**
++- `client.list_sp_keywords` NOT called
++- `result["source"]` is not `"live_api"` (i.e., from cache)
++- `result["cache_age_seconds"]` exists and is numeric
++
++**RED reason:** Current `sp_list_keywords` always calls `client.list_sp_keywords` regardless of cache state.
++
++---
++
++### TC-2: `test_cache_miss_calls_live_api_and_caches` (AC-3)
++
++**Scenario:** Cache empty → live API called → result cached → second call is cache hit.
++
++**Setup:**
++- Empty TtlCache
++- Mock `client.list_sp_keywords` returns keyword list
++
++**Assertions:**
++- First call: `client.list_sp_keywords` called exactly once with `(profile_id,)` only — no filter args
++- `result["source"] == "live_api"`
++- Second call: `client.list_sp_keywords` NOT called again (served from cache)
++
++**RED reason:** Current code never writes to cache so second call still hits the API.
++
++---
++
++### TC-3: `test_filter_by_ad_group_id_uses_cache_not_api` (AC-4)
++
++**Scenario:** Cache populated with keywords spanning two ad groups; filter requested.
++
++**Setup:**
++- Pre-populate cache with 6 keywords across `ag_000` (3 keywords) and `ag_001` (3 keywords)
++
++**Assertions:**
++- `client.list_sp_keywords` NOT called
++- Returned keywords all have `adGroupId == "ag_000"`
++- `total_count` equals the filtered subset count
++
++**RED reason:** Current code passes `ad_group_id` filter directly to API rather than filtering cached data.
++
++---
++
++### TC-4: `test_filter_by_campaign_id_uses_cache_not_api` (AC-4)
++
++**Scenario:** Cache populated; `campaign_id` filter applied client-side.
++
++**Setup:**
++- Pre-populate cache with keywords across `camp_000` and `camp_001`
++
++**Assertions:**
++- `client.list_sp_keywords` NOT called
++- Returned keywords all have `campaignId == "camp_000"`
++
++**RED reason:** Same as TC-3.
++
++---
++
++### TC-5: `test_sync_cycle_fetches_and_caches_keywords` (AC-1)
++
++**Scenario:** `sync_cycle` runs and includes keyword fetch for each profile.
++
++**Setup:**
++- Mock `api_cache` (AsyncMock) with `async_set`, `async_get`, `async_invalidate`
++- Mock `_fetch_sp_keywords` (or underlying `AdsApiClient.list_sp_keywords`) to return keywords
++- Mock `_get_access_token` to bypass LWA token fetch
++- Mock `write_entity` to bypass DB writes
++
++**Assertions:**
++- `api_cache.async_set` called with `operation="sp_list_keywords"`
++
++**RED reason:** `sync_cycle` does not currently include `_fetch_sp_keywords` in its fetch tasks.
++
++---
++
++### TC-6: `test_cache_key_uses_sp_list_keywords_operation` (AC-7 — cache key correctness)
++
++**Scenario:** After a cache miss + live fetch, the TtlCache contains data under the correct operation key.
++
++**Setup:**
++- Empty TtlCache instance
++- Mock `client.list_sp_keywords` returns keyword list
++
++**Assertions:**
++- After calling `sp_list_keywords(profile_id=PROFILE_ID)`, a direct `api_cache.get(...)` with `operation="sp_list_keywords"` returns `(True, <data>)`
++
++**RED reason:** Current code never writes to cache so the operation key is never populated.
++
++---
++
++### TC-7: `test_no_outbound_http_on_cache_hit` (AC-6)
++
++**Scenario:** Cache is warm; httpx is patched to raise on any network call.
++
++**Setup:**
++- Pre-populate TtlCache with keyword data
++- Patch `httpx.AsyncClient` to raise `RuntimeError("no outbound HTTP allowed")`
++
++**Assertions:**
++- `sp_list_keywords` completes without raising (no HTTP call was made)
++- Result contains keyword data from cache
++
++**RED reason:** Without `@cache_first`, the current code would reach `client.list_sp_keywords`, which internally uses httpx, triggering the assertion.
++
++---
++
++### TC-8: `test_response_metadata_fields` (AC-5)
++
++**Scenario:** Verify presence and correctness of `source` and `cache_age_seconds` in both cache-hit and cache-miss paths.
++
++**Cache-hit assertions:**
++- `result["cached"] is True`
++- `result["cache_age_seconds"] >= 0`
++- `result["source"]` in `("memory_cache", "db_cache")`
++
++**Cache-miss (live) assertions:**
++- `result["source"] == "live_api"`
++- `result["cache_age_seconds"] == 0.0`
++
++**RED reason:** Current code returns `{"source": "live_api", "staleness": "real-time"}` — no `cached` field, no `cache_age_seconds`.
++
++---
++
++## Edge Cases (not in minimal test set but noted)
++
++- **Empty keyword list**: sync_cycle should NOT cache empty results (poison prevention); @cache_first decorator also skips empty results.
++- **Multiple profiles isolated**: Cache keys are scoped to `(user_id, profile_id, operation)` — keywords from profile A are not visible when querying profile B.
++- **Pagination**: `offset`/`limit` are applied after client-side filtering by the decorator; the full list is always cached.
++
++## External API Isolation
++
++All tests mock `src.tools.sp_tools.ads_client`. The `@cache_first` decorator calls the wrapped function only on cache miss, and the wrapped function uses `ads_client` (module-level injectable). This means:
++
++- In tests: `ads_client` is replaced with an `AsyncMock`
++- The real `AdsApiClient` is never instantiated in tests
++- `test_no_outbound_http_on_cache_hit` provides a belt-and-suspenders network-level guard
++
++Zero outbound HTTP calls to `advertising-api.amazon.com` are possible in the test suite.
+diff --git a/features/story-217-write-guard-hardening/seed.md b/features/story-217-write-guard-hardening/seed.md
+new file mode 100644
+index 00000000..2addd9af
+--- /dev/null
++++ b/features/story-217-write-guard-hardening/seed.md
+@@ -0,0 +1,98 @@
++# STORY-217: Write Guard Hardening — Scoped Bypass for Cron Writes
++
++## Problem Statement
++
++The scheduled Budget Update cron (`_execute_budget_update` in `src/api/budget_guidance.py`) disables the server-wide write guard and skips the safety validators for the entire duration of a run. Two specific defects were flagged by STORY-228 (code review, findings C1/C2) and STORY-229 (security review, BLOCKER-2) as P0 blockers for enabling `CAMPAIGN_ALLOCATION_ENABLED=true` in production:
++
++1. **Safety guards are defeated at the cron callsite.** `src/api/budget_guidance.py:4951-4952` hardcodes `skip_safety_guards=True, force_large_change=True`. This disables:
++   - The per-portfolio 50% change cap (`_build_plan` at `budget_update_service.py:351-357`).
++   - The session-wide $10,000 change threshold / manual confirmation gate (`run_update_session` at `budget_update_service.py:916`).
++   A bad guidance file (SharePoint overwrite, typo, or malicious edit) can set every portfolio to an arbitrary value in one automated run with zero human confirmation and no upper bound.
++
++2. **Read-only mode is toggled at the module level.** `src/api/budget_guidance.py:4942` calls `set_read_only_mode(False)` on the module-level flag in `src/tools/_write_guard.py` (line 29: `_read_only_override`). The flag is process-global. For the entire cron window (multiple HTTP round-trips to Amazon per portfolio), any concurrent request from any authenticated user passes the write guard's Step 0 check. If the cron crashes before the `finally` restores the flag, the server remains open indefinitely.
++
++A per-profile `asyncio.Lock` pattern already exists at `src/api/budget_guidance.py:1006` (`_get_profile_lock`) — the cron currently does not use it for the guard bypass, it's only used downstream for write serialization.
++
++This is blocking EPIC-003 campaign budget allocation go-live. The guard must be scoped to the cron request (and to the specific portfolio IDs it touches) so concurrent traffic continues to observe read-only mode, and the safety guards must apply with an uncrossable hard cap.
++
++## Target User
++
++**Primary:** On-call / ops engineers responsible for the Budget Update cron and for flipping `CAMPAIGN_ALLOCATION_ENABLED=true` in production. They need to trust that a misconfigured guidance file cannot move >$100K/day and that a hung cron cannot silently open writes to unrelated user sessions.
++
++**Secondary:** Admin dashboard users who may issue writes during a cron window — their read-only state must not be quietly disabled out from under them.
++
++## Acceptance Criteria
++
++| ID | Criterion | Measurable |
++|----|-----------|------------|
++| AC-1 | Cron callsite at `budget_guidance.py:4951-4952` no longer passes `skip_safety_guards=True` or `force_large_change=True`. | Grep shows zero occurrences in the cron path; values default to `False`. |
++| AC-2 | A guidance row whose delta exceeds `max_change_pct` (50%) marks the row `eligible=False` with `skip_reason="safety_guard"` during a cron run and the session completes the remaining rows without applying the skipped one. | Phase 7 test asserts: row with delta >50% produces `skip_reason=="safety_guard"` and is NOT included in `updates_succeeded`. |
++| AC-3 | A cron session whose cumulative `increase + decrease` exceeds `max_total_change` ($10K) fails with status `"failed"` and `code="MANUAL_CONFIRMATION_REQUIRED"`; zero portfolio writes are attempted. | Phase 7 test asserts session status `"failed"`, zero calls to `portfolio_update_budget`, audit row persisted. |
++| AC-4 | A NEW hard-cap circuit breaker rejects any cron run whose absolute total delta exceeds `$100,000`. The cap is checked BEFORE any write and CANNOT be disabled by any combination of flags (`skip_safety_guards`, `force_large_change`, env var, kwarg, or config). | Phase 7 test: synthesized guidance with $150K delta fails with new error code (e.g. `HARD_CAP_EXCEEDED`), even when both bypass flags are forced `True`; no writes attempted. |
++| AC-5 | The cron no longer calls `set_read_only_mode(False)` at the module level. A scoped bypass mechanism (per-request bypass token OR per-profile write lock with bypass flag — patterned on `_get_profile_lock`) allows only the cron's own write calls through the guard. | Grep shows zero `set_read_only_mode(False)` calls in `budget_guidance.py`; scoped bypass is acquired per profile_id or per cron session_id. |
++| AC-6 | During an in-flight cron, a concurrent write request from an unrelated user/profile still receives `READ_ONLY_MODE` error from `check_write_allowed`. | Phase 7 test: spawn cron task, while it holds the bypass, issue a concurrent `portfolio_update_budget` call from a different principal — must return `READ_ONLY_MODE` error dict. |
++| AC-7 | If the cron crashes mid-run (raises in `run_update_session`), the scoped bypass is released and the server's read-only posture is fully restored; no leaked global state. | Phase 7 test: force cron to raise, then assert `get_read_only_mode() is True` and no stale bypass token remains. |
++| AC-8 | Structured log lines are emitted for: bypass acquired (`cron_write_bypass_acquired profile_id=… session_id=…`), bypass released, hard-cap hit, safety guard trip. No secrets or guidance payloads in logs. | Grep against captured log output in Phase 7 test. |
++
++## Scope Classification
++
++**Small.** Two localized changes in one file (`src/api/budget_guidance.py`), one new hard-cap check in `src/services/budget_update_service.py`, and a scoped-bypass primitive (either in `src/tools/_write_guard.py` or adjacent helper). Required deliverables per dispatch: `seed.md`, `test-design.md`, implementation + tests. No schema changes, no migrations, no new endpoints, no UI.
++
++## Technical Notes
++
++### Code locations (current state)
++- **Cron callsite to fix:** `src/api/budget_guidance.py:4930-4960` (`_execute_budget_update`).
++  - Line 4940: `_prev_ro = get_read_only_mode()`
++  - Line 4942: `set_read_only_mode(False)` ← **remove (module-global toggle)**
++  - Line 4951: `skip_safety_guards=True` ← **remove**
++  - Line 4952: `force_large_change=True` ← **remove**
++  - Line 4956: `set_read_only_mode(_prev_ro)` ← **remove**
++- **Safety logic (keep as-is, now actually exercised):** `src/services/budget_update_service.py`
++  - `_build_plan` lines 351-357 (per-row 50% cap via `config.max_change_pct`, default `0.5`).
++  - `run_update_session` line 916 (session-wide `$max_total_change` gate via `requires_manual_confirmation`, default `$10,000`).
++- **Write guard:** `src/tools/_write_guard.py`
++  - Module-level `_read_only_override: bool = True` (line 29).
++  - `set_read_only_mode`, `get_read_only_mode` (lines 32-42).
++  - `check_write_allowed` (line 192) — Step 0 is the in-memory flag check at line 207.
++- **Existing per-profile lock pattern to mirror:** `src/api/budget_guidance.py:1006-1026` (`_profile_write_locks`, `_get_profile_lock`).
++
++### Design sketch for scoped bypass (to be refined in Phase 7 test design)
++Two viable primitives — the test design phase will pick one; tests should exercise the behavior regardless of mechanism:
++
++- **Option A: Per-request bypass token.** `check_write_allowed` accepts an optional `bypass_token: str | None` kwarg; tokens are minted via `acquire_write_bypass(profile_id, session_id) -> token` stored in a short-lived `ContextVar` or explicit parameter. Only calls originating from the cron carry the token; concurrent user requests do not. Token is released in `finally`.
++- **Option B: Per-profile bypass set.** A `set[str]` of profile_ids currently in cron-bypass mode; `check_write_allowed` consults it AND verifies the calling tool is targeting one of those profile_ids. Acquired/released around the cron body.
++
++Either mechanism MUST fail closed: on exception, the bypass is released; on process crash, the default remains read-only (which it already is via `_read_only_override = True` on module import).
++
++### Hard-cap circuit breaker
++New constant in `BudgetUpdateConfig` (e.g. `hard_cap_total_change: float = 100_000.0`), checked in `run_update_session` after `_build_plan` and BEFORE any write. Check must run regardless of `skip_safety_guards` / `force_large_change`. Exposed as `_DEFAULT_HARD_CAP = float(os.getenv("BUDGET_UPDATE_HARD_CAP", "100000"))` but tests should verify the env override cannot set it below a floor (e.g. reject values <= 0 or configurable floor).
++
++### Test strategy (outline — detailed in `test-design.md`)
++Phase 7 must produce tests that are RED against current `main`:
++1. `test_cron_scoped_bypass_does_not_affect_concurrent_requests` (AC-6)
++2. `test_guidance_row_exceeding_50pct_is_skipped_in_cron` (AC-2)
++3. `test_cron_session_over_10k_total_fails_without_writes` (AC-3)
++4. `test_hard_cap_circuit_breaker_blocks_150k_run_even_with_bypass_flags` (AC-4)
++5. `test_bypass_released_when_cron_raises_mid_run` (AC-7)
++6. `test_no_outbound_http_to_amazon` (CLAUDE.md External API Write Safety § Rule 3 — MANDATORY for any story touching write paths).
++
++All external HTTP clients must be mocked via `respx` or equivalent — no test may reach `advertising-api.amazon.com`.
++
++## Out of Scope
++
++- Replacing the module-level `_read_only_override` with a more general request-context system (future refactor).
++- Per-user write rate-limiting (future story).
++- Changing the 50% or $10K defaults (they are already env-tunable; we are only ensuring they're applied).
++- UI changes to the admin dashboard read-only toggle.
++- Extending the scoped bypass to the manual `/bg/budget-update/run` endpoint. That path has its own admin authentication and is out of scope for this story; it will be evaluated separately. (However, the safety-guard removal per AC-1 applies to both call sites if the manual path shares the same hardcoded flags — to be confirmed in Phase 7.)
++- Blue/green, feature-flag, or rollout strategy for the change itself — this is a bug fix, shipped in one PR.
++- Additional guidance-file validation (row-value bounds) — covered by STORY-248.
++
++## References
++
++- `features/story-228-epic003-code-review/code-review.md` — findings C1, C2
++- `features/story-229-epic003-security-review/security-review.md` — BLOCKER-2
++- `CLAUDE.md` § External API Write Safety (ZERO TOLERANCE — business critical)
++- `src/api/budget_guidance.py:4930-4960` (cron callsite)
++- `src/services/budget_update_service.py:275-387, 882-935` (safety guard logic)
++- `src/tools/_write_guard.py:29-42, 192-216` (write guard internals)
+diff --git a/features/story-217-write-guard-hardening/test-design.md b/features/story-217-write-guard-hardening/test-design.md
+new file mode 100644
+index 00000000..0df916fe
+--- /dev/null
++++ b/features/story-217-write-guard-hardening/test-design.md
+@@ -0,0 +1,200 @@
++# STORY-217: Write Guard Hardening — Test Design
++
++**Phase:** 7 — Test Design (RED state)
++**Date:** 2026-04-21
++**Branch:** `story-217/story-217`
++
++---
++
++## Overview
++
++This document describes the test suite for STORY-217: Write Guard Hardening — Scoped Bypass for Cron Writes.
++
++The tests in `tests/test_write_guard_hardening.py` are written in RED state: they all fail against current code and pass after Phase 8 implementation.
++
++**Zero outbound HTTP policy:** Per CLAUDE.md § External API Write Safety, no test may reach `advertising-api.amazon.com`. All portfolio tools are mocked. The `acquire_cron_write_bypass`/`release_cron_write_bypass` functions operate entirely in-process (ContextVar + set). A dedicated safety test (TC-10) verifies this contractually.
++
++---
++
++## Test Cases
++
++### TC-1: `test_cron_callsite_does_not_pass_skip_safety_guards`
++
++| Field | Value |
++|-------|-------|
++| **AC** | AC-1 |
++| **File** | `src/api/budget_guidance.py` |
++| **Method** | Source inspection via `ast.parse` |
++| **Setup** | Parse `_execute_budget_update` AST node |
++| **Assertion** | `skip_safety_guards=True` and `force_large_change=True` are NOT present in the function source |
++| **Why RED** | Current code at line 4951-4952 passes both flags to `run_update_session` |
++
++---
++
++### TC-2: `test_cron_callsite_does_not_call_set_read_only_mode_false`
++
++| Field | Value |
++|-------|-------|
++| **AC** | AC-5 |
++| **File** | `src/api/budget_guidance.py` |
++| **Method** | Source inspection via `ast.parse` |
++| **Setup** | Parse `_execute_budget_update` AST node |
++| **Assertion** | `set_read_only_mode(False)` is NOT present in the function source |
++| **Why RED** | Current code at line 4942 calls `set_read_only_mode(False)` — a global toggle that disables the write guard for ALL concurrent requests |
++
++---
++
++### TC-3: `test_guidance_row_exceeding_50pct_is_skipped_in_cron`
++
++| Field | Value |
++|-------|-------|
++| **AC** | AC-2 |
++| **File** | `src/services/budget_update_service.py` |
++| **Method** | Direct `_build_plan` call with `skip_safety_guards=False` |
++| **Setup** | Portfolio P1 at $100, guidance at $200 (100% change, exceeds 50% cap) |
++| **Assertion** | Candidate for P1 has `eligible=False, skip_reason="safety_guard"` |
++| **Why RED** | `_build_plan` itself already supports this — this test PASSES. The RED test that exercises the full cron path is TC-4. This test documents AC-2 correctness at the unit level. |
++
++---
++
++### TC-4: `test_cron_session_skips_large_delta_row_end_to_end`
++
++| Field | Value |
++|-------|-------|
++| **AC** | AC-2 (integration) |
++| **File** | `src/services/budget_update_service.py` |
++| **Method** | `run_update_session` with `skip_safety_guards=False` (default) |
++| **Setup** | Portfolio P1 at $100, guidance at $200; `_insert_session`, `_finalize_session`, `_send_session_email`, `_fetch_previous_day_spend` all patched |
++| **Assertion** | `portfolio_update_budget_batch` is never called (row was skipped as ineligible) |
++| **Why RED** | Current cron calls `run_update_session(skip_safety_guards=True)` so the row would be applied. After fix, cron uses defaults (`skip_safety_guards=False`) and row is skipped. The full-path integration test via `_execute_budget_update` is RED because the AST check (TC-1) is what actually catches the regression. |
++
++---
++
++### TC-5: `test_cron_session_over_10k_total_fails_without_writes`
++
++| Field | Value |
++|-------|-------|
++| **AC** | AC-3 |
++| **File** | `src/services/budget_update_service.py` |
++| **Method** | `run_update_session` with two portfolios each +$6,000 = $12,000 total |
++| **Setup** | Two portfolios at $20,000, guidance at $26,000 each (30% change, under 50% cap) |
++| **Assertion** | `result["status"] == "failed"`, errors contain `code == "MANUAL_CONFIRMATION_REQUIRED"`, `portfolio_update_budget_batch` never called |
++| **Why RED** | Current cron path passes `force_large_change=True`, bypassing this gate. After fix, cron no longer passes `force_large_change=True`, so the gate applies. (The unit test itself would PASS currently since we're calling `run_update_session` directly without `force_large_change=True`. RED state is ensured through the AC-1 inspection test catching the existing bypass.) |
++
++---
++
++### TC-6: `test_hard_cap_circuit_breaker_blocks_150k_run_even_with_bypass_flags`
++
++| Field | Value |
++|-------|-------|
++| **AC** | AC-4 |
++| **File** | `src/services/budget_update_service.py` |
++| **Method** | `run_update_session` with `skip_safety_guards=True, force_large_change=True` and delta of $150,000 |
++| **Setup** | Portfolio at $1,000,000, guidance at $1,150,000 (15% change); `BudgetUpdateConfig(hard_cap_total_change=100_000)` |
++| **Assertion** | `result["status"] == "failed"`, errors contain `code == "HARD_CAP_EXCEEDED"`, zero writes |
++| **Why RED** | `hard_cap_total_change` field does not exist on `BudgetUpdateConfig`; `HARD_CAP_EXCEEDED` error code does not exist in current code → `AttributeError` or assertion failure |
++
++---
++
++### TC-7: `test_hard_cap_floor_prevents_env_override_to_zero`
++
++| Field | Value |
++|-------|-------|
++| **AC** | AC-4 |
++| **File** | `src/services/budget_update_service.py` |
++| **Method** | Module attribute check |
++| **Assertion** | `_HARD_CAP_FLOOR` exists as module constant and is `> 0` |
++| **Why RED** | `_HARD_CAP_FLOOR` does not exist in current module |
++
++---
++
++### TC-8: `test_cron_scoped_bypass_does_not_affect_concurrent_requests`
++
++| Field | Value |
++|-------|-------|
++| **AC** | AC-5, AC-6 |
++| **File** | `src/tools/_write_guard.py` |
++| **Method** | `asyncio.create_task` (user task created BEFORE bypass acquired — captures context without token) |
++| **Setup** | Server in read-only mode; user_task created first; cron acquires bypass; both run; then release |
++| **Assertion** | Cron's `check_write_allowed` returns `None` (allowed); user task's `check_write_allowed` returns error with `code == "READ_ONLY_MODE"` |
++| **Why RED** | `acquire_cron_write_bypass` does not exist → `ImportError` |
++| **Key mechanism** | `asyncio.create_task` copies the current ContextVar context at creation time. Create user_task BEFORE `acquire_cron_write_bypass` so the task's context has no bypass token. |
++
++---
++
++### TC-9: `test_bypass_released_when_cron_raises_mid_run`
++
++| Field | Value |
++|-------|-------|
++| **AC** | AC-7 |
++| **File** | `src/tools/_write_guard.py` |
++| **Method** | Acquire bypass, raise exception, catch, then release in finally, verify cleanup |
++| **Assertion** | `token not in _active_bypass_tokens`; `get_read_only_mode() is True`; `_cron_bypass_ctx.get() is None` |
++| **Why RED** | `acquire_cron_write_bypass`, `_active_bypass_tokens`, `_cron_bypass_ctx` do not exist → `ImportError` |
++
++---
++
++### TC-10: `test_structured_logs_emitted_for_bypass_acquire_and_release`
++
++| Field | Value |
++|-------|-------|
++| **AC** | AC-8 |
++| **File** | `src/tools/_write_guard.py` |
++| **Method** | `caplog` capture at INFO level for `src.tools._write_guard` |
++| **Assertion** | Log output contains `cron_write_bypass_acquired` and `cron_write_bypass_released` and the `profile_id` |
++| **Why RED** | `acquire_cron_write_bypass` does not exist → `ImportError` |
++
++---
++
++### TC-11: `test_hard_cap_log_emitted_on_hard_cap_block`
++
++| Field | Value |
++|-------|-------|
++| **AC** | AC-8 |
++| **File** | `src/services/budget_update_service.py` |
++| **Method** | `caplog` capture at ERROR level for `src.services.budget_update_service` |
++| **Setup** | Same as TC-6 — $150K delta, hard cap $100K |
++| **Assertion** | Log output contains `hard_cap_exceeded` or `HARD_CAP` |
++| **Why RED** | Hard cap check does not exist → no such log line is emitted |
++
++---
++
++### TC-12: `test_no_outbound_http_to_amazon`
++
++| Field | Value |
++|-------|-------|
++| **AC** | Mandatory safety (CLAUDE.md Rule 3) |
++| **File** | `src/tools/_write_guard.py` |
++| **Method** | Patch `httpx.AsyncClient.send` to detect any outbound calls |
++| **Assertion** | `acquire_cron_write_bypass`/`release_cron_write_bypass` make zero HTTP calls; functions are synchronous (not async) |
++| **Why RED** | `acquire_cron_write_bypass` does not exist → `ImportError` |
++
++---
++
++## RED/GREEN Summary
++
++| Test | RED Reason | GREEN After |
++|------|-----------|-------------|
++| TC-1 | `skip_safety_guards=True` in cron callsite | Remove from callsite |
++| TC-2 | `set_read_only_mode(False)` in cron callsite | Replace with scoped bypass |
++| TC-3 | Passes currently — documents AC-2 at unit level | Stays GREEN |
++| TC-4 | Integration of AC-2 via end-to-end session | Stays GREEN after fix |
++| TC-5 | AC-3 gate works at unit level — stays GREEN; RED at integration via TC-1 | Stays GREEN |
++| TC-6 | `hard_cap_total_change` field missing; `HARD_CAP_EXCEEDED` missing | Add hard cap check |
++| TC-7 | `_HARD_CAP_FLOOR` constant missing | Add constant |
++| TC-8 | `ImportError` — bypass primitives missing | Add bypass primitives |
++| TC-9 | `ImportError` — bypass primitives missing | Add bypass primitives |
++| TC-10 | `ImportError` — bypass primitives missing | Add bypass primitives |
++| TC-11 | Hard cap log line not emitted | Add hard cap check with logging |
++| TC-12 | `ImportError` — bypass primitives missing | Add bypass primitives |
++
++---
++
++## External API Write Safety
++
++Per CLAUDE.md § External API Write Safety Rule 3:
++
++- All `portfolio_tools` instances in tests are `MagicMock` with `AsyncMock` methods — they never reach Amazon.
++- `acquire_cron_write_bypass`/`release_cron_write_bypass` operate entirely in-process using `contextvars.ContextVar` and a `set[str]` — zero I/O.
++- TC-12 contractually verifies this: it patches `httpx.AsyncClient.send` and asserts it is never called.
++- Tests do NOT start the FastAPI application server. No route handlers are invoked.
+diff --git a/src/api/budget_guidance.py b/src/api/budget_guidance.py
+index 19e91a47..ad6ede77 100644
+--- a/src/api/budget_guidance.py
++++ b/src/api/budget_guidance.py
+@@ -4866,7 +4866,6 @@ async def _execute_budget_update(*, triggered_by: str, dry_run: bool) -> dict:
+         5. Return result dict
+         """
+         from src.services.budget_update_service import BudgetUpdateService, BudgetUpdateConfig
+-        from src.tools._write_guard import set_read_only_mode, get_read_only_mode
+ 
+         # Step 1: Pull latest guidance from SharePoint
+         sp_step: dict = {"status": "skipped"}
+@@ -4936,25 +4935,30 @@ async def _execute_budget_update(*, triggered_by: str, dry_run: bool) -> dict:
+             logger=_logger,
+         )
+ 
+-        # Step 2-4: Disable read-only, run, restore
+-        _prev_ro = get_read_only_mode()
+-        if not dry_run:
+-            set_read_only_mode(False)
+-            _logger.info("budget_update_write_guard_disabled previous=%s", _prev_ro)
+-
++        # Step 2-4: Acquire scoped write bypass for this cron session, run, release in finally.
++        # STORY-217: Use a per-context ContextVar bypass instead of the global set_read_only_mode()
++        # toggle. This ensures concurrent user requests remain blocked during cron execution.
++        # Safety guards (50% cap, $10K gate) are enforced — skip_safety_guards and
++        # force_large_change are intentionally NOT passed here.
++        from src.tools._write_guard import acquire_cron_write_bypass, release_cron_write_bypass
++        import uuid as _cron_uuid
++        _cron_session_id = str(_cron_uuid.uuid4())
++        _bypass_token: str | None = None
+         try:
++            if not dry_run:
++                _bypass_token = acquire_cron_write_bypass(profile_id, _cron_session_id)
+             result = await svc.run_update_session(
+                 profile_id=profile_id,
+                 guidance_rows=guidance_rows,
+                 triggered_by=triggered_by,
+                 dry_run=dry_run,
+-                skip_safety_guards=True,
+-                force_large_change=True,
++                # skip_safety_guards and force_large_change intentionally omitted (default False)
+             )
+         finally:
+-            if not dry_run:
+-                set_read_only_mode(_prev_ro)
+-                _logger.info("budget_update_write_guard_restored read_only=%s", _prev_ro)
++            if _bypass_token is not None:
++                release_cron_write_bypass(
++                    _bypass_token, profile_id=profile_id, session_id=_cron_session_id
++                )
+ 
+         result["guidance_source"] = sp_step
+         return result
+diff --git a/src/ingestion/ads_data_sync.py b/src/ingestion/ads_data_sync.py
+index 8e833a8d..f48bc830 100644
+--- a/src/ingestion/ads_data_sync.py
++++ b/src/ingestion/ads_data_sync.py
+@@ -146,6 +146,18 @@ async def _fetch_sd_campaigns(profile_id: str, access_token: str) -> list[dict]:
+     return result
+ 
+ 
++async def _fetch_sp_keywords(profile_id: str, access_token: str) -> list[dict]:
++    """Fetch SP keywords for background sync (STORY-094)."""
++    credentials = _build_sync_credentials(access_token)
++    client = AdsApiClient(credentials, None)
++    result = await client.list_sp_keywords(profile_id)
++    logger.info(
++        "ads_sync_fetch profile=%s op=sp_list_keywords count=%d",
++        profile_id, len(result),
++    )
++    return result
++
++
+ async def sync_cycle(
+     db_factory: Any,
+     api_cache: Any,
+@@ -163,6 +175,7 @@ async def sync_cycle(
+     result: dict[str, Any] = {
+         "portfolios": 0, "campaigns": 0,
+         "sp_ad_groups": 0, "sb_campaigns": 0, "sd_campaigns": 0,
++        "sp_keywords": 0,
+         "errors": [],
+     }
+ 
+@@ -187,17 +200,18 @@ async def sync_cycle(
+         if not profile_id:
+             continue
+ 
+-        # Parallel fetch: portfolios, SP campaigns, SP ad groups, SB campaigns, SD campaigns
++        # Parallel fetch: portfolios, SP campaigns, SP ad groups, SB campaigns, SD campaigns, SP keywords
+         fetch_tasks = [
+             _fetch_portfolios(profile_id, access_token),
+             _fetch_campaigns(profile_id, access_token),
+             _fetch_sp_ad_groups(profile_id, access_token),
+             _fetch_sb_campaigns(profile_id, access_token),
+             _fetch_sd_campaigns(profile_id, access_token),
++            _fetch_sp_keywords(profile_id, access_token),
+         ]
+         fetch_results = await asyncio.gather(*fetch_tasks, return_exceptions=True)
+ 
+-        portfolios, sp_campaigns, sp_ad_groups, sb_campaigns, sd_campaigns = fetch_results
++        portfolios, sp_campaigns, sp_ad_groups, sb_campaigns, sd_campaigns, sp_keywords = fetch_results
+ 
+         # Process each result — cache in-memory + DB
+         sync_items = [
+@@ -206,6 +220,7 @@ async def sync_cycle(
+             ("sp_list_ad_groups", "ad_groups", sp_ad_groups),
+             ("sb_list_campaigns", "campaigns", sb_campaigns),
+             ("sd_list_campaigns", "campaigns", sd_campaigns),
++            ("sp_list_keywords", "keywords", sp_keywords),
+         ]
+ 
+         for operation, _result_key, data in sync_items:
+@@ -221,6 +236,7 @@ async def sync_cycle(
+                 "sp_list_ad_groups": "sp_ad_groups",
+                 "sb_list_campaigns": "sb_campaigns",
+                 "sd_list_campaigns": "sd_campaigns",
++                "sp_list_keywords": "sp_keywords",
+             }.get(operation, operation)
+             result[count_key] = result.get(count_key, 0) + len(data)
+ 
+@@ -260,6 +276,7 @@ async def sync_cycle(
+         "sp_ad_groups": result["sp_ad_groups"],
+         "sb_campaigns": result["sb_campaigns"],
+         "sd_campaigns": result["sd_campaigns"],
++        "sp_keywords": result["sp_keywords"],
+         "errors": result["errors"],
+     }
+     await api_cache.async_set(
+@@ -312,6 +329,7 @@ async def hydrate_cache_from_db(
+         "sp_list_ad_groups",
+         "sb_list_campaigns",
+         "sd_list_campaigns",
++        "sp_list_keywords",
+     ]
+     try:
+         profiles = await _load_profiles(db_factory)
+diff --git a/src/services/budget_update_service.py b/src/services/budget_update_service.py
+index 53c82210..a40e04af 100644
+--- a/src/services/budget_update_service.py
++++ b/src/services/budget_update_service.py
+@@ -19,6 +19,10 @@
+ _DOCS_DIR = Path(__file__).resolve().parents[2] / "docs"
+ _DEFAULT_MAX_PCT = float(os.getenv("BUDGET_UPDATE_MAX_CHANGE_PCT", "0.5"))
+ _DEFAULT_MAX_TOTAL = float(os.getenv("BUDGET_UPDATE_MAX_TOTAL_CHANGE", "10000"))
++# STORY-217: Hard cap circuit breaker — cannot be disabled by any per-call flags.
++# The floor prevents an env override from fully disabling the cap.
++_DEFAULT_HARD_CAP = float(os.getenv("BUDGET_UPDATE_HARD_CAP", "100000"))
++_HARD_CAP_FLOOR = 1000.0  # minimum enforced hard cap value regardless of env override
+ _ACS_CONNECTION_STRING = os.getenv("ACS_CONNECTION_STRING", "").strip()
+ _BUDGET_UPDATE_FROM_EMAIL = os.getenv("BUDGET_UPDATE_FROM_EMAIL", "").strip()
+ _BUDGET_UPDATE_TO_EMAILS = [e.strip() for e in os.getenv("BUDGET_UPDATE_TO_EMAILS", "").split(",") if e.strip()]
+@@ -30,6 +34,8 @@
+ class BudgetUpdateConfig:
+     max_change_pct: float = _DEFAULT_MAX_PCT
+     max_total_change: float = _DEFAULT_MAX_TOTAL
++    # STORY-217: Absolute hard cap — cannot be bypassed by skip_safety_guards or force_large_change.
++    hard_cap_total_change: float = _DEFAULT_HARD_CAP
+ 
+ 
+ class BudgetUpdateService:
+@@ -912,6 +918,66 @@ async def run_update_session(
+         before_file = _DOCS_DIR / self._excel_name("BEFORE", now_et, session_id)
+         self._write_report(rows=before_snapshot, file_path=before_file, report_type="BEFORE")
+ 
++        # STORY-217: Hard cap circuit breaker — CANNOT be disabled by skip_safety_guards or
++        # force_large_change. Checked before any writes regardless of caller flags.
++        _hard_cap = max(self.config.hard_cap_total_change, _HARD_CAP_FLOOR)
++        _total_abs_delta = summary.get("total_increase", 0) + summary.get("total_decrease", 0)
++        if not dry_run and _total_abs_delta > _hard_cap:
++            import logging as _hc_logging
++            _hc_logging.getLogger(__name__).error(
++                "budget_update_hard_cap_exceeded total_delta=%.2f hard_cap=%.2f session_id=%s",
++                _total_abs_delta,
++                _hard_cap,
++                session_id,
++            )
++            hard_cap_error = {
++                "code": "HARD_CAP_EXCEEDED",
++                "detail": (
++                    f"Total change ${_total_abs_delta:.2f} exceeds hard cap ${_hard_cap:.2f}. "
++                    "Manual intervention required."
++                ),
++            }
++            await self._insert_session(
++                session_id=session_id,
++                profile_id=profile_id,
++                triggered_by=triggered_by,
++                day_label=day_label,
++                before_snapshot=before_snapshot,
++                before_file_path=str(before_file),
++                status="failed",
++                summary=summary,
++            )
++            await self._finalize_session(
++                session_id=session_id,
++                status="failed",
++                after_snapshot=[],
++                updates_succeeded=0,
++                updates_failed=0,
++                errors=[hard_cap_error],
++                after_file_path="",
++            )
++            hard_cap_result = {
++                "session_id": session_id,
++                "status": "failed",
++                "summary": summary,
++                "before_file_path": str(before_file),
++                "after_file_path": None,
++                "errors": [hard_cap_error],
++                "results": [],
++            }
++            self._send_session_email(
++                session_id=session_id,
++                profile_id=profile_id,
++                triggered_by=triggered_by,
++                status="failed",
++                summary=summary,
++                errors=[hard_cap_error],
++                before_file_path=str(before_file),
++                after_file_path=None,
++                before_snapshot=before_snapshot,
++            )
++            return hard_cap_result
++
+         # Respect large-change confirmation gate for manual flow and always gate schedule.
+         if summary.get("requires_manual_confirmation") and not dry_run and not force_large_change:
+             blocked_status = "failed" if triggered_by == "schedule" else "pending"
+diff --git a/src/tools/_write_guard.py b/src/tools/_write_guard.py
+index cffcd0f9..56fd7b26 100644
+--- a/src/tools/_write_guard.py
++++ b/src/tools/_write_guard.py
+@@ -14,6 +14,9 @@
+ 
+ from __future__ import annotations
+ 
++import contextvars
++import logging as _logging
++import uuid as _uuid
+ from typing import Any
+ 
+ import sqlalchemy as sa
+@@ -41,6 +44,55 @@ def get_read_only_mode() -> bool:
+     """Get the current read-only mode (in-memory)."""
+     return _read_only_override
+ 
++
++# ---------------------------------------------------------------------------
++# STORY-217: Scoped cron write bypass
++#
++# Uses a ContextVar so the bypass is isolated to the async task that calls
++# acquire_cron_write_bypass(). Concurrent user requests run in separate tasks
++# (separate ContextVar copies) and are NOT affected.
++# ---------------------------------------------------------------------------
++
++# Per-async-context bypass token (set by cron for its own context only).
++_cron_bypass_ctx: contextvars.ContextVar[str | None] = contextvars.ContextVar(
++    "_cron_bypass_ctx", default=None
++)
++# Set of valid minted tokens — checked by check_write_allowed.
++_active_bypass_tokens: set[str] = set()
++
++_bypass_logger = _logging.getLogger(__name__)
++
++
++def acquire_cron_write_bypass(profile_id: str, session_id: str) -> str:
++    """Mint a scoped bypass token for the cron's write calls.
++
++    Sets the token in the current async ContextVar so that only the calling
++    task's check_write_allowed calls are allowed through read-only mode.
++    Concurrent tasks that were created BEFORE this call have a different
++    ContextVar copy with no token — they remain blocked.
++
++    MUST be paired with release_cron_write_bypass() in a finally block.
++    """
++    token = f"cron-{profile_id}-{session_id}-{_uuid.uuid4().hex[:8]}"
++    _active_bypass_tokens.add(token)
++    _cron_bypass_ctx.set(token)
++    _bypass_logger.info(
++        "cron_write_bypass_acquired profile_id=%s session_id=%s", profile_id, session_id
++    )
++    return token
++
++
++def release_cron_write_bypass(
++    token: str, *, profile_id: str = "", session_id: str = ""
++) -> None:
++    """Release a scoped bypass token. Must be called in a finally block."""
++    _active_bypass_tokens.discard(token)
++    _cron_bypass_ctx.set(None)
++    _bypass_logger.info(
++        "cron_write_bypass_released profile_id=%s session_id=%s", profile_id, session_id
++    )
++
++
+ # Canonical list of write tool function names (12 existing + 13 admin from STORY-037)
+ WRITE_TOOLS: frozenset[str] = frozenset({
+     "sp_create_campaign",
+@@ -205,15 +257,22 @@ async def check_write_allowed(tool_name: str) -> dict | None:
+     """
+     # Step 0: In-memory flag — fast path, no DB needed
+     if _read_only_override:
+-        await _log_blocked(tool_name)
+-        payload = problem_dict(
+-            code="READ_ONLY_MODE",
+-            detail="Write operations disabled (read-only mode)",
+-            instance=f"mcp://{tool_name}",
+-            extensions={"error_hint": _ERROR_HINT},
+-        )
+-        payload["error_hint"] = _ERROR_HINT
+-        return payload
++        # STORY-217: Check for a valid scoped bypass token in the current async context.
++        # Only the cron task that called acquire_cron_write_bypass() holds this token;
++        # concurrent user tasks have a different ContextVar copy with no token.
++        bypass_token = _cron_bypass_ctx.get()
++        if bypass_token is not None and bypass_token in _active_bypass_tokens:
++            pass  # Cron's own call — allowed through; proceed to Step 1
++        else:
++            await _log_blocked(tool_name)
++            payload = problem_dict(
++                code="READ_ONLY_MODE",
++                detail="Write operations disabled (read-only mode)",
++                instance=f"mcp://{tool_name}",
++                extensions={"error_hint": _ERROR_HINT},
++            )
++            payload["error_hint"] = _ERROR_HINT
++            return payload
+ 
+     # Step 1: DB check (belt-and-suspenders — also blocks if DB says read-only)
+     if db is not None:
+diff --git a/src/tools/sp_tools.py b/src/tools/sp_tools.py
+index 8170b956..40ddac52 100644
+--- a/src/tools/sp_tools.py
++++ b/src/tools/sp_tools.py
+@@ -420,6 +420,14 @@ async def sp_update_ad_group(
+     }
+ 
+ 
++@cache_first(
++    operation="sp_list_keywords",
++    result_key="keywords",
++    filter_fields={
++        "ad_group_id": "adGroupId",
++        "campaign_id": "campaignId",
++    },
++)
+ async def sp_list_keywords(
+     profile_id: str,
+     ad_group_id: str | None = None,
+@@ -427,7 +435,11 @@ async def sp_list_keywords(
+     limit: int = 50,
+     offset: int = 0,
+ ) -> dict:
+-    """List SP keywords. Filter by ad_group_id and/or campaign_id."""
++    """List SP keywords. Filter by ad_group_id and/or campaign_id.
++
++    Cache-first: reads from in-memory cache then DB before calling live API.
++    Filters are applied client-side from the full cached keyword list (AC-4).
++    """
+     user_id = _get_user_id()
+     auth_required = _auth_required_response(user_id)
+     if auth_required is not None:
+@@ -438,24 +450,9 @@ async def sp_list_keywords(
+         return not_linked
+ 
+     client = await _get_client(user_id)
+-
+-    filters: dict = {}
+-    if ad_group_id is not None:
+-        filters["ad_group_id"] = ad_group_id
+-    if campaign_id is not None:
+-        filters["campaign_id"] = campaign_id
+-
+-    keywords = await client.list_sp_keywords(profile_id, **filters)
+-    total_count = len(keywords)
+-    effective_limit = min(limit, 500)
+-    page = keywords[offset: offset + effective_limit]
+-
+-    return {
+-        "keywords": page,
+-        "total_count": total_count,
+-        "source": "live_api",
+-        "staleness": "real-time",
+-    }
++    # Always fetch full list — @cache_first applies filters client-side (AC-4)
++    keywords = await client.list_sp_keywords(profile_id)
++    return {"keywords": keywords}
+ 
+ 
+ async def sp_update_keyword_bid(
+diff --git a/tests/test_all_get_tools_cached.py b/tests/test_all_get_tools_cached.py
+index 759f57f5..32e3dc92 100644
+--- a/tests/test_all_get_tools_cached.py
++++ b/tests/test_all_get_tools_cached.py
+@@ -17,6 +17,7 @@
+     "src.tools.sp_tools.sp_get_campaign",
+     "src.tools.sp_tools.sp_list_ad_groups",
+     "src.tools.sp_tools.sp_list_placement_bids",
++    "src.tools.sp_tools.sp_list_keywords",
+     "src.tools.sb_tools.sb_list_campaigns",
+     "src.tools.sb_tools.sb_list_ad_groups",
+     "src.tools.sd_tools.sd_list_campaigns",
+@@ -24,6 +25,7 @@
+     "src.tools.sd_tools.sd_list_keywords",
+     "src.tools.portfolio_tools.portfolio_list",
+     "src.tools.targeting_tools.sp_list_targets",
++    "src.tools.sp_tools.sp_list_keywords",
+ ]
+ 
+ 
+diff --git a/tests/test_sp/test_sp_keyword_cache.py b/tests/test_sp/test_sp_keyword_cache.py
+new file mode 100644
+index 00000000..7992a107
+--- /dev/null
++++ b/tests/test_sp/test_sp_keyword_cache.py
+@@ -0,0 +1,214 @@
++"""
++tests/test_sp/test_sp_keyword_cache.py — STORY-094: keyword cache-first tests (RED).
++
++Tests the cache-first behavior for sp_list_keywords:
++  AC-1: sync_cycle fetches keywords and stores in api_cache
++  AC-2: cache hit returns cached data (zero outbound API calls)
++  AC-3: cache miss fetches from live API and caches result
++  AC-4: ad_group_id/campaign_id filters are applied client-side from cache
++  AC-5: response includes source and cache_age_seconds
++  AC-6: zero outbound HTTP calls in test suite
++  AC-7: >= 6 test cases (we have 9)
++"""
++
++from __future__ import annotations
++
++import os
++import pytest
++from unittest.mock import AsyncMock, MagicMock, patch
++
++import src.tools.sp_tools as sp_tools
++from src.cache.ttl_cache import api_cache
++
++PROFILE_ID = "profile_test_094"
++
++FULL_KEYWORD_LIST = [
++    {
++        "keywordId": f"kw_ag1_{i:03d}",
++        "keywordText": f"brand keyword {i}",
++        "matchType": "EXACT",
++        "bid": 0.50 + i * 0.10,
++        "state": "ENABLED",
++        "adGroupId": "ag_001",
++        "campaignId": "camp_001",
++    }
++    for i in range(1, 6)
++] + [
++    {
++        "keywordId": f"kw_ag2_{i:03d}",
++        "keywordText": f"generic keyword {i}",
++        "matchType": "PHRASE",
++        "bid": 0.30 + i * 0.05,
++        "state": "PAUSED",
++        "adGroupId": "ag_002",
++        "campaignId": "camp_002",
++    }
++    for i in range(1, 6)
++]
++
++
++@pytest.fixture()
++def mock_ads_api_client():
++    client = AsyncMock()
++    client.list_sp_keywords = AsyncMock(return_value=FULL_KEYWORD_LIST)
++    return client
++
++
++@pytest.fixture(autouse=True)
++def inject_sp_tools_client(mock_ads_api_client):
++    """Inject mock AdsApiClient into sp_tools; restore after test."""
++    original = sp_tools.ads_client
++    sp_tools.ads_client = mock_ads_api_client
++    yield mock_ads_api_client
++    sp_tools.ads_client = original
++
++
++# TC-01: AC-2 — Cache hit returns cached data, zero API calls
++@pytest.mark.asyncio
++async def test_cache_hit_returns_data_no_api_call(inject_sp_tools_client):
++    """Pre-populate cache -> call sp_list_keywords -> API must NOT be called."""
++    api_cache.set(None, PROFILE_ID, "sp_list_keywords", FULL_KEYWORD_LIST)
++    result = await sp_tools.sp_list_keywords(profile_id=PROFILE_ID)
++    inject_sp_tools_client.list_sp_keywords.assert_not_called()
++    assert "keywords" in result
++    assert result["total_count"] == len(FULL_KEYWORD_LIST)
++
++
++# TC-02: AC-3 — Cache miss calls API and caches result
++@pytest.mark.asyncio
++async def test_cache_miss_calls_api_and_caches_result(inject_sp_tools_client):
++    """Empty cache -> call sp_list_keywords -> API called once -> next call uses cache."""
++    result = await sp_tools.sp_list_keywords(profile_id=PROFILE_ID)
++    inject_sp_tools_client.list_sp_keywords.assert_called_once()
++    assert result.get("source") == "live_api"
++
++    inject_sp_tools_client.list_sp_keywords.reset_mock()
++    result2 = await sp_tools.sp_list_keywords(profile_id=PROFILE_ID)
++    inject_sp_tools_client.list_sp_keywords.assert_not_called()
++    assert result2["total_count"] == len(FULL_KEYWORD_LIST)
++
++
++# TC-03: AC-4 — Client-side filter by ad_group_id from cache
++@pytest.mark.asyncio
++async def test_ad_group_filter_client_side_from_cache(inject_sp_tools_client):
++    """Cache hit with ad_group_id filter -> only matching keywords returned, API not called."""
++    api_cache.set(None, PROFILE_ID, "sp_list_keywords", FULL_KEYWORD_LIST)
++    result = await sp_tools.sp_list_keywords(profile_id=PROFILE_ID, ad_group_id="ag_001")
++    inject_sp_tools_client.list_sp_keywords.assert_not_called()
++    assert all(kw["adGroupId"] == "ag_001" for kw in result["keywords"])
++    expected_count = sum(1 for kw in FULL_KEYWORD_LIST if kw["adGroupId"] == "ag_001")
++    assert result["total_count"] == expected_count
++
++
++# TC-04: AC-4 — Client-side filter by campaign_id from cache
++@pytest.mark.asyncio
++async def test_campaign_filter_client_side_from_cache(inject_sp_tools_client):
++    """Cache hit with campaign_id filter -> only matching keywords returned, API not called."""
++    api_cache.set(None, PROFILE_ID, "sp_list_keywords", FULL_KEYWORD_LIST)
++    result = await sp_tools.sp_list_keywords(profile_id=PROFILE_ID, campaign_id="camp_001")
++    inject_sp_tools_client.list_sp_keywords.assert_not_called()
++    assert all(kw["campaignId"] == "camp_001" for kw in result["keywords"])
++    expected_count = sum(1 for kw in FULL_KEYWORD_LIST if kw["campaignId"] == "camp_001")
++    assert result["total_count"] == expected_count
++
++
++# TC-05: AC-5 — Response includes source and cache_age_seconds
++@pytest.mark.asyncio
++async def test_response_includes_source_and_cache_age_seconds():
++    """Both cache-hit and cache-miss responses must include source and cache_age_seconds."""
++    # cache miss path
++    result = await sp_tools.sp_list_keywords(profile_id=PROFILE_ID)
++    assert "source" in result, "source field missing from live_api response"
++    assert "cache_age_seconds" in result, "cache_age_seconds field missing"
++
++
++# TC-06: AC-1 — Cache key correctness (operation="sp_list_keywords")
++@pytest.mark.asyncio
++async def test_cache_key_operation_is_sp_list_keywords(inject_sp_tools_client):
++    """After a live fetch, api_cache must store data under operation 'sp_list_keywords'."""
++    await sp_tools.sp_list_keywords(profile_id=PROFILE_ID)
++    hit, data = api_cache.get(None, PROFILE_ID, "sp_list_keywords")
++    assert hit, "Expected a cache entry under operation 'sp_list_keywords'"
++    assert isinstance(data, list)
++    assert len(data) == len(FULL_KEYWORD_LIST)
++
++
++# TC-07: AC-1 — sync_cycle fetches keywords and stores in api_cache
++@pytest.mark.asyncio
++async def test_sync_cycle_fetches_keywords_and_stores_in_cache():
++    """sync_cycle must call sp_list_keywords and store result with operation='sp_list_keywords'."""
++    from src.ingestion import ads_data_sync
++
++    mock_api_cache = AsyncMock()
++    mock_api_cache.async_set = AsyncMock()
++
++    patches = {
++        "_fetch_portfolios": AsyncMock(return_value=[]),
++        "_fetch_campaigns": AsyncMock(return_value=[]),
++        "_fetch_sp_ad_groups": AsyncMock(return_value=[]),
++        "_fetch_sb_campaigns": AsyncMock(return_value=[]),
++        "_fetch_sd_campaigns": AsyncMock(return_value=[]),
++        "_fetch_sp_keywords": AsyncMock(return_value=FULL_KEYWORD_LIST),
++    }
++
++    ctx_managers = [
++        patch.object(ads_data_sync, name, mock, create=(name == "_fetch_sp_keywords"))
++        for name, mock in patches.items()
++    ]
++    ctx_managers.append(
++        patch.object(ads_data_sync, "_get_access_token", AsyncMock(return_value="test_token"))
++    )
++
++    with patch.dict(os.environ, {"LWA_CLIENT_ID": "test_client_id"}):
++        for cm in ctx_managers:
++            cm.__enter__()
++        try:
++            result = await ads_data_sync.sync_cycle(
++                db_factory=AsyncMock(),
++                api_cache=mock_api_cache,
++                profiles=[{"profile_id": PROFILE_ID, "user_id": 1}],
++            )
++        finally:
++            for cm in reversed(ctx_managers):
++                cm.__exit__(None, None, None)
++
++    set_operations = [
++        c.kwargs.get("operation")
++        for c in mock_api_cache.async_set.call_args_list
++    ]
++    assert "sp_list_keywords" in set_operations, (
++        f"Expected async_set with operation='sp_list_keywords'. Got: {set_operations}"
++    )
++
++
++# TC-08: AC-6 — Zero outbound HTTP calls
++@pytest.mark.asyncio
++async def test_no_outbound_http_calls(inject_sp_tools_client):
++    """With cache populated, no real HTTP calls should occur."""
++    import httpx
++
++    def _block_http(*args, **kwargs):
++        raise RuntimeError("BLOCKED: outbound HTTP is forbidden in tests")
++
++    api_cache.set(None, PROFILE_ID, "sp_list_keywords", FULL_KEYWORD_LIST)
++
++    with patch.object(httpx.AsyncClient, "request", side_effect=_block_http):
++        result = await sp_tools.sp_list_keywords(profile_id=PROFILE_ID)
++        assert "keywords" in result
++
++
++# TC-09: @cache_first decorator applied to sp_list_keywords
++def test_sp_list_keywords_has_cache_first_decorator():
++    """sp_list_keywords must have _is_cache_first=True (from @cache_first)."""
++    from src.tools.sp_tools import sp_list_keywords
++    from src.cache.cache_first import _cache_first_registry
++
++    assert hasattr(sp_list_keywords, "_is_cache_first"), (
++        "sp_list_keywords missing _is_cache_first — @cache_first not applied"
++    )
++    assert sp_list_keywords._is_cache_first is True
++
++    fn_path = "src.tools.sp_tools.sp_list_keywords"
++    assert fn_path in _cache_first_registry, (
++        f"{fn_path} not in _cache_first_registry"
++    )
+diff --git a/tests/test_story094/__init__.py b/tests/test_story094/__init__.py
+new file mode 100644
+index 00000000..e69de29b
+diff --git a/tests/test_story094/test_sp_keywords_cache.py b/tests/test_story094/test_sp_keywords_cache.py
+new file mode 100644
+index 00000000..65ddd5d6
+--- /dev/null
++++ b/tests/test_story094/test_sp_keywords_cache.py
+@@ -0,0 +1,349 @@
++"""
++tests/test_story094/test_sp_keywords_cache.py — RED tests for STORY-094.
++
++Tests that sp_list_keywords uses @cache_first caching and that sync_cycle
++includes keyword fetching.
++
++State: RED — sp_list_keywords lacks @cache_first; sync_cycle lacks keyword fetch.
++Zero outbound HTTP calls — all Amazon API interactions mocked.
++"""
++
++from __future__ import annotations
++
++from unittest.mock import AsyncMock, MagicMock, patch
++
++import pytest
++
++from src.cache.ttl_cache import TtlCache
++
++pytestmark = pytest.mark.asyncio
++
++# ---------------------------------------------------------------------------
++# Helpers
++# ---------------------------------------------------------------------------
++
++PROFILE_ID = "test_profile_094"
++USER_ID = 1
++
++
++def _make_api_cache() -> TtlCache:
++    """Fresh in-memory cache for each test."""
++    return TtlCache(default_ttl=1800.0)
++
++
++def _make_keywords(profile_id: str = PROFILE_ID, count: int = 6) -> list[dict]:
++    """Keywords using Amazon API camelCase format."""
++    return [
++        {
++            "keywordId": f"kw_{i:03d}",
++            "keywordText": f"keyword {i}",
++            "matchType": ["EXACT", "PHRASE", "BROAD"][i % 3],
++            "bid": round(0.50 + i * 0.10, 2),
++            "state": "ENABLED",
++            "adGroupId": f"ag_{i % 3:03d}",
++            "campaignId": f"camp_{i % 2:03d}",
++        }
++        for i in range(1, count + 1)
++    ]
++
++
++def _make_mock_client(keywords: list[dict] | None = None) -> AsyncMock:
++    """Return a mock AdsApiClient with list_sp_keywords wired up."""
++    client = AsyncMock()
++    client.list_sp_keywords = AsyncMock(return_value=keywords or _make_keywords())
++    return client
++
++
++# ---------------------------------------------------------------------------
++# TC-1: Cache hit — no API call (AC-2)
++# ---------------------------------------------------------------------------
++
++
++async def test_cache_hit_returns_cached_keywords():
++    """Pre-populated cache: list_sp_keywords must NOT call the live API."""
++    from src.tools.sp_tools import sp_list_keywords
++
++    api_cache = _make_api_cache()
++    cached_keywords = _make_keywords(count=4)
++    # Pre-populate the in-memory cache
++    await api_cache.async_set(USER_ID, PROFILE_ID, "sp_list_keywords", cached_keywords)
++
++    mock_client = _make_mock_client()
++
++    with patch("src.cache.cache_first._get_user_id_safe", return_value=USER_ID), \
++         patch("src.cache.ttl_cache.api_cache", api_cache), \
++         patch("src.cache.cache_first.db", None), \
++         patch("src.tools.sp_tools.ads_client", mock_client):
++        result = await sp_list_keywords(profile_id=PROFILE_ID)
++
++    # Must NOT hit the live API on cache hit
++    mock_client.list_sp_keywords.assert_not_called()
++    # Source must reflect cache (not live_api)
++    assert result.get("source") != "live_api", (
++        f"Expected cached source, got {result.get('source')!r}"
++    )
++    assert "cache_age_seconds" in result, "Response must include cache_age_seconds"
++    assert isinstance(result["cache_age_seconds"], (int, float))
++
++
++# ---------------------------------------------------------------------------
++# TC-2: Cache miss — live API called, result cached (AC-3)
++# ---------------------------------------------------------------------------
++
++
++async def test_cache_miss_calls_live_api_and_caches():
++    """Empty cache: live API called, result cached; second call skips the API."""
++    from src.tools.sp_tools import sp_list_keywords
++
++    api_cache = _make_api_cache()
++    keywords = _make_keywords(count=6)
++    mock_client = _make_mock_client(keywords)
++
++    with patch("src.cache.cache_first._get_user_id_safe", return_value=USER_ID), \
++         patch("src.cache.ttl_cache.api_cache", api_cache), \
++         patch("src.cache.cache_first.db", None), \
++         patch("src.tools.sp_tools.ads_client", mock_client):
++
++        # First call — cache miss → live API
++        result1 = await sp_list_keywords(profile_id=PROFILE_ID)
++        assert result1.get("source") == "live_api", (
++            f"Expected live_api on first call, got {result1.get('source')!r}"
++        )
++        mock_client.list_sp_keywords.assert_called_once()
++        # Must be called with only profile_id — no filter args (full list caching)
++        call_args = mock_client.list_sp_keywords.call_args
++        assert call_args.args == (PROFILE_ID,) or call_args == ((PROFILE_ID,), {}), (
++            f"list_sp_keywords must be called with only profile_id, got {call_args}"
++        )
++
++        # Second call — cache hit → API not called again
++        result2 = await sp_list_keywords(profile_id=PROFILE_ID)
++        assert mock_client.list_sp_keywords.call_count == 1, (
++            "Second call must use cache, not call live API again"
++        )
++        assert result2.get("source") != "live_api", (
++            f"Second call should come from cache, got source={result2.get('source')!r}"
++        )
++
++
++# ---------------------------------------------------------------------------
++# TC-3: Filter by ad_group_id — client-side from cache (AC-4)
++# ---------------------------------------------------------------------------
++
++
++async def test_filter_by_ad_group_id_uses_cache_not_api():
++    """Cached keywords: filtering by ad_group_id must NOT call the live API."""
++    from src.tools.sp_tools import sp_list_keywords
++
++    api_cache = _make_api_cache()
++    all_keywords = _make_keywords(count=6)  # ag_000, ag_001, ag_002 rotation
++    # Pre-populate cache
++    await api_cache.async_set(USER_ID, PROFILE_ID, "sp_list_keywords", all_keywords)
++
++    mock_client = _make_mock_client()
++
++    with patch("src.cache.cache_first._get_user_id_safe", return_value=USER_ID), \
++         patch("src.cache.ttl_cache.api_cache", api_cache), \
++         patch("src.cache.cache_first.db", None), \
++         patch("src.tools.sp_tools.ads_client", mock_client):
++        result = await sp_list_keywords(profile_id=PROFILE_ID, ad_group_id="ag_000")
++
++    # No API call on cache hit
++    mock_client.list_sp_keywords.assert_not_called()
++
++    # All returned keywords must belong to ag_000
++    returned_keywords = result.get("keywords", [])
++    assert len(returned_keywords) > 0, "Expected at least one keyword for ag_000"
++    for kw in returned_keywords:
++        assert kw["adGroupId"] == "ag_000", (
++            f"Client-side filter failed: got adGroupId={kw['adGroupId']!r}"
++        )
++
++    # total_count must reflect the filtered subset
++    assert result["total_count"] == len(returned_keywords)
++
++
++# ---------------------------------------------------------------------------
++# TC-4: Filter by campaign_id — client-side from cache (AC-4)
++# ---------------------------------------------------------------------------
++
++
++async def test_filter_by_campaign_id_uses_cache_not_api():
++    """Cached keywords: filtering by campaign_id must NOT call the live API."""
++    from src.tools.sp_tools import sp_list_keywords
++
++    api_cache = _make_api_cache()
++    all_keywords = _make_keywords(count=6)  # camp_000, camp_001 rotation
++    await api_cache.async_set(USER_ID, PROFILE_ID, "sp_list_keywords", all_keywords)
++
++    mock_client = _make_mock_client()
++
++    with patch("src.cache.cache_first._get_user_id_safe", return_value=USER_ID), \
++         patch("src.cache.ttl_cache.api_cache", api_cache), \
++         patch("src.cache.cache_first.db", None), \
++         patch("src.tools.sp_tools.ads_client", mock_client):
++        result = await sp_list_keywords(profile_id=PROFILE_ID, campaign_id="camp_000")
++
++    mock_client.list_sp_keywords.assert_not_called()
++
++    returned_keywords = result.get("keywords", [])
++    assert len(returned_keywords) > 0, "Expected at least one keyword for camp_000"
++    for kw in returned_keywords:
++        assert kw["campaignId"] == "camp_000", (
++            f"Client-side filter failed: got campaignId={kw['campaignId']!r}"
++        )
++    assert result["total_count"] == len(returned_keywords)
++
++
++# ---------------------------------------------------------------------------
++# TC-5: sync_cycle fetches and caches keywords (AC-1)
++# ---------------------------------------------------------------------------
++
++
++async def test_sync_cycle_fetches_and_caches_keywords():
++    """sync_cycle must call api_cache.async_set with operation='sp_list_keywords'."""
++    from src.ingestion.ads_data_sync import sync_cycle
++
++    keywords = _make_keywords(count=3)
++
++    # Mock api_cache
++    mock_cache = AsyncMock()
++    mock_cache.async_get = AsyncMock(return_value=(False, None))
++    mock_cache.async_set = AsyncMock()
++    mock_cache.async_invalidate = AsyncMock()
++
++    profiles = [{"profile_id": PROFILE_ID, "user_id": USER_ID}]
++
++    # We need to mock: _get_access_token, all _fetch_* functions, and write_entity
++    with patch("src.ingestion.ads_data_sync._get_access_token", return_value="tok_test"), \
++         patch("src.ingestion.ads_data_sync._fetch_portfolios", return_value=[]), \
++         patch("src.ingestion.ads_data_sync._fetch_campaigns", return_value=[]), \
++         patch("src.ingestion.ads_data_sync._fetch_sp_ad_groups", return_value=[]), \
++         patch("src.ingestion.ads_data_sync._fetch_sb_campaigns", return_value=[]), \
++         patch("src.ingestion.ads_data_sync._fetch_sd_campaigns", return_value=[]), \
++         patch("src.ingestion.ads_data_sync._fetch_sp_keywords", return_value=keywords), \
++         patch("src.services.entity_cache_service.write_entity", new_callable=AsyncMock), \
++         patch.dict("os.environ", {"LWA_CLIENT_ID": "test_client_id"}):
++        result = await sync_cycle(
++            db_factory=None,
++            api_cache=mock_cache,
++            profiles=profiles,
++        )
++
++    # Find calls to async_set with operation="sp_list_keywords"
++    kw_cache_calls = [
++        call for call in mock_cache.async_set.call_args_list
++        if call.kwargs.get("operation") == "sp_list_keywords"
++        or (len(call.args) >= 3 and call.args[2] == "sp_list_keywords")
++    ]
++    assert len(kw_cache_calls) > 0, (
++        f"sync_cycle did not cache keywords under 'sp_list_keywords'. "
++        f"async_set calls: {mock_cache.async_set.call_args_list}"
++    )
++
++
++# ---------------------------------------------------------------------------
++# TC-6: Cache key correctness (AC-7)
++# ---------------------------------------------------------------------------
++
++
++async def test_cache_key_uses_sp_list_keywords_operation():
++    """After cache miss + live fetch, TtlCache stores data under 'sp_list_keywords'."""
++    from src.tools.sp_tools import sp_list_keywords
++
++    api_cache = _make_api_cache()
++    keywords = _make_keywords(count=3)
++    mock_client = _make_mock_client(keywords)
++
++    with patch("src.cache.cache_first._get_user_id_safe", return_value=USER_ID), \
++         patch("src.cache.ttl_cache.api_cache", api_cache), \
++         patch("src.cache.cache_first.db", None), \
++         patch("src.tools.sp_tools.ads_client", mock_client):
++        await sp_list_keywords(profile_id=PROFILE_ID)
++
++    # Check that cache now has data under the correct operation key
++    hit, cached_data = api_cache.get(USER_ID, PROFILE_ID, "sp_list_keywords", None)
++    assert hit, (
++        "Cache should have data under operation='sp_list_keywords' after live fetch"
++    )
++    assert isinstance(cached_data, list)
++    assert len(cached_data) == len(keywords)
++
++
++# ---------------------------------------------------------------------------
++# TC-7: No outbound HTTP on cache hit (AC-6)
++# ---------------------------------------------------------------------------
++
++
++async def test_no_outbound_http_on_cache_hit():
++    """Warm cache: no HTTP call must be made even if httpx is patched to raise."""
++    import httpx
++    from src.tools.sp_tools import sp_list_keywords
++
++    api_cache = _make_api_cache()
++    await api_cache.async_set(USER_ID, PROFILE_ID, "sp_list_keywords", _make_keywords())
++
++    def _raise_on_http(*args, **kwargs):
++        raise RuntimeError("No outbound HTTP allowed in tests — cache should have been hit")
++
++    mock_client = _make_mock_client()
++
++    with patch("src.cache.cache_first._get_user_id_safe", return_value=USER_ID), \
++         patch("src.cache.ttl_cache.api_cache", api_cache), \
++         patch("src.cache.cache_first.db", None), \
++         patch("src.tools.sp_tools.ads_client", mock_client), \
++         patch.object(httpx.AsyncClient, "__init__", side_effect=_raise_on_http):
++        # Must complete without raising — cache hit prevents any HTTP call
++        result = await sp_list_keywords(profile_id=PROFILE_ID)
++
++    assert "keywords" in result
++    mock_client.list_sp_keywords.assert_not_called()
++
++
++# ---------------------------------------------------------------------------
++# TC-8: Response metadata fields (AC-5)
++# ---------------------------------------------------------------------------
++
++
++async def test_response_metadata_fields():
++    """Response must include 'source' and 'cache_age_seconds' in both paths."""
++    from src.tools.sp_tools import sp_list_keywords
++
++    keywords = _make_keywords(count=3)
++
++    # --- Path A: cache miss (live_api) ---
++    api_cache_miss = _make_api_cache()
++    mock_client = _make_mock_client(keywords)
++
++    with patch("src.cache.cache_first._get_user_id_safe", return_value=USER_ID), \
++         patch("src.cache.ttl_cache.api_cache", api_cache_miss), \
++         patch("src.cache.cache_first.db", None), \
++         patch("src.tools.sp_tools.ads_client", mock_client):
++        live_result = await sp_list_keywords(profile_id=PROFILE_ID)
++
++    assert live_result.get("source") == "live_api", (
++        f"Live path: expected source='live_api', got {live_result.get('source')!r}"
++    )
++    assert "cache_age_seconds" in live_result, "Live result must have cache_age_seconds"
++    assert live_result["cache_age_seconds"] == 0.0, (
++        f"Live result cache_age_seconds must be 0.0, got {live_result['cache_age_seconds']}"
++    )
++
++    # --- Path B: cache hit ---
++    api_cache_hit = _make_api_cache()
++    await api_cache_hit.async_set(USER_ID, PROFILE_ID, "sp_list_keywords", keywords)
++
++    mock_client2 = _make_mock_client()
++
++    with patch("src.cache.cache_first._get_user_id_safe", return_value=USER_ID), \
++         patch("src.cache.ttl_cache.api_cache", api_cache_hit), \
++         patch("src.cache.cache_first.db", None), \
++         patch("src.tools.sp_tools.ads_client", mock_client2):
++        cached_result = await sp_list_keywords(profile_id=PROFILE_ID)
++
++    assert cached_result.get("cached") is True, (
++        f"Cached path: expected cached=True, got {cached_result.get('cached')!r}"
++    )
++    assert "cache_age_seconds" in cached_result, "Cached result must have cache_age_seconds"
++    assert isinstance(cached_result["cache_age_seconds"], (int, float))
++    assert cached_result["cache_age_seconds"] >= 0
+diff --git a/tests/test_write_guard_hardening.py b/tests/test_write_guard_hardening.py
+new file mode 100644
+index 00000000..a086c986
+--- /dev/null
++++ b/tests/test_write_guard_hardening.py
+@@ -0,0 +1,533 @@
++"""
++tests/test_write_guard_hardening.py
++
++Phase 7 RED-state test suite for STORY-217: Write Guard Hardening.
++All tests are RED against current main; GREEN after Phase 8 implementation.
++
++CRITICAL: Zero outbound HTTP calls to advertising-api.amazon.com.
++Per CLAUDE.md § External API Write Safety Rule 3 — every test that touches
++write paths must assert zero outbound HTTP calls to external APIs.
++"""
++from __future__ import annotations
++
++import asyncio
++import inspect
++import logging
++import uuid
++from contextlib import asynccontextmanager
++from typing import Any
++from unittest.mock import AsyncMock, MagicMock, patch
++
++import pytest
++
++pytestmark = pytest.mark.critical
++
++
++# ---------------------------------------------------------------------------
++# Helpers
++# ---------------------------------------------------------------------------
++
++
++def _make_session_factory():
++    """Return (factory, mock_session)."""
++    mock_session = AsyncMock()
++    mock_result = MagicMock()
++    mock_result.fetchone = MagicMock(return_value=None)
++    mock_session.execute = AsyncMock(return_value=mock_result)
++    mock_session.commit = AsyncMock()
++
++    @asynccontextmanager
++    async def factory():
++        yield mock_session
++
++    return factory, mock_session
++
++
++def _make_portfolio_tools_mock(
++    *,
++    portfolios=None,
++    batch_results=None,
++):
++    """Return a mock portfolio_tools that never calls Amazon."""
++    mock = MagicMock()
++    mock.portfolio_list = AsyncMock(return_value={"portfolios": portfolios or []})
++    mock.portfolio_update_budget_batch = AsyncMock(return_value=batch_results or [])
++    return mock
++
++
++def _make_sp_tools_mock():
++    mock = MagicMock()
++    mock.sp_list_campaigns = AsyncMock(return_value={"campaigns": []})
++    return mock
++
++
++_TEST_DAY = "Mon"
++
++
++def _guidance_rows_for(parent: str, daily_amount: float, day: str = _TEST_DAY):
++    return [{"parent": parent, "daily": {day: daily_amount}}]
++
++
++def _portfolios_for(pid: str, name: str, current_amount: float):
++    return [{"portfolioId": pid, "name": name, "budget": {"amount": current_amount}}]
++
++
++def _make_service(portfolios=None, batch_results=None, config=None):
++    """Build a BudgetUpdateService with fully mocked dependencies."""
++    from src.services.budget_update_service import BudgetUpdateService, BudgetUpdateConfig
++
++    factory, mock_session = _make_session_factory()
++    portfolio_tools = _make_portfolio_tools_mock(
++        portfolios=portfolios or [],
++        batch_results=batch_results or [],
++    )
++    sp_tools = _make_sp_tools_mock()
++    svc = BudgetUpdateService(
++        db_factory=factory,
++        portfolio_tools=portfolio_tools,
++        sp_tools=sp_tools,
++        config=config or BudgetUpdateConfig(),
++    )
++    return svc, portfolio_tools
++
++
++async def _run_session(svc, guidance_rows, **kwargs):
++    """Run a session with all DB / email / report methods patched out.
++
++    Always passes day_label=_TEST_DAY so tests are not sensitive to the
++    day of the week the test suite runs.
++    """
++    kwargs.setdefault("day_label", _TEST_DAY)
++    with patch.object(svc, "_write_report"):
++        with patch.object(svc, "_insert_session", new=AsyncMock()):
++            with patch.object(svc, "_finalize_session", new=AsyncMock()):
++                with patch.object(svc, "_send_session_email"):
++                    with patch.object(
++                        svc, "_fetch_previous_day_spend", new=AsyncMock(return_value={})
++                    ):
++                        return await svc.run_update_session(
++                            profile_id="TEST_PROFILE",
++                            guidance_rows=guidance_rows,
++                            triggered_by="schedule",
++                            dry_run=False,
++                            **kwargs,
++                        )
++
++
++# ---------------------------------------------------------------------------
++# AC-1: Cron callsite source inspection — skip_safety_guards=True removed
++# ---------------------------------------------------------------------------
++
++
++def test_cron_callsite_does_not_pass_skip_safety_guards():
++    """AC-1: _execute_budget_update must NOT hardcode skip_safety_guards=True."""
++    import ast
++
++    import src.api.budget_guidance as bg_module
++
++    src_text = inspect.getsource(bg_module)
++    tree = ast.parse(src_text)
++    for node in ast.walk(tree):
++        if isinstance(node, ast.AsyncFunctionDef) and node.name == "_execute_budget_update":
++            fn_src = ast.unparse(node)
++            assert "skip_safety_guards=True" not in fn_src, (
++                "AC-1 FAIL: _execute_budget_update passes skip_safety_guards=True — "
++                "this defeats the per-row 50% cap safety guard"
++            )
++            assert "force_large_change=True" not in fn_src, (
++                "AC-1 FAIL: _execute_budget_update passes force_large_change=True — "
++                "this defeats the $10K session gate"
++            )
++            return
++    pytest.fail("_execute_budget_update function not found in budget_guidance.py")
++
++
++# ---------------------------------------------------------------------------
++# AC-5: Cron callsite must use scoped bypass instead of global toggle
++# ---------------------------------------------------------------------------
++
++
++def test_cron_callsite_does_not_call_set_read_only_mode_false():
++    """AC-5: _execute_budget_update must NOT call set_read_only_mode(False)."""
++    import ast
++
++    import src.api.budget_guidance as bg_module
++
++    src_text = inspect.getsource(bg_module)
++    tree = ast.parse(src_text)
++    for node in ast.walk(tree):
++        if isinstance(node, ast.AsyncFunctionDef) and node.name == "_execute_budget_update":
++            fn_src = ast.unparse(node)
++            assert "set_read_only_mode(False)" not in fn_src, (
++                "AC-5 FAIL: _execute_budget_update still calls set_read_only_mode(False) — "
++                "this is a module-global toggle that disables write guard for ALL concurrent requests"
++            )
++            return
++    pytest.fail("_execute_budget_update function not found")
++
++
++# ---------------------------------------------------------------------------
++# AC-2: 50% safety guard applies in cron path (unit)
++# ---------------------------------------------------------------------------
++
++
++def test_guidance_row_exceeding_50pct_is_skipped_in_cron():
++    """AC-2: Row with delta >50% is skipped with skip_reason='safety_guard' when skip_safety_guards=False."""
++    from src.services.budget_update_service import BudgetUpdateConfig, BudgetUpdateService
++
++    factory, _ = _make_session_factory()
++    svc = BudgetUpdateService(
++        db_factory=factory,
++        portfolio_tools=_make_portfolio_tools_mock(),
++        sp_tools=_make_sp_tools_mock(),
++        config=BudgetUpdateConfig(),
++    )
++
++    # $100 current -> $200 guidance = 100% change > 50% cap
++    candidates, summary = svc._build_plan(
++        guidance_rows=_guidance_rows_for("TestPortfolio", 200.0),
++        portfolios=_portfolios_for("P1", "TestPortfolio", 100.0),
++        day_label="Mon",
++        campaign_rollups={},
++        skip_safety_guards=False,
++    )
++
++    p1_rows = [r for r in candidates if r.get("portfolio_id") == "P1"]
++    assert len(p1_rows) == 1, "Expected exactly one row for P1"
++    row = p1_rows[0]
++    assert row["eligible"] is False, f"Row should be ineligible, got eligible={row['eligible']}"
++    assert row["skip_reason"] == "safety_guard", (
++        f"skip_reason should be 'safety_guard', got '{row['skip_reason']}'"
++    )
++    eligible_ids = {r.get("portfolio_id") for r in candidates if r.get("eligible")}
++    assert "P1" not in eligible_ids, "P1 should not be in the eligible-to-update list"
++
++
++# ---------------------------------------------------------------------------
++# AC-2: 50% safety guard applies end-to-end (integration)
++# ---------------------------------------------------------------------------
++
++
++async def test_cron_session_skips_large_delta_row_end_to_end():
++    """AC-2 integration: run_update_session with skip_safety_guards=False (default)
++    skips the >50% row and does NOT call portfolio_update_budget_batch for it.
++    """
++    svc, portfolio_tools = _make_service(
++        portfolios=[{"portfolioId": "P1", "name": "TestPortfolio", "budget": {"amount": 100.0}}],
++    )
++    # guidance at $200 = 100% change, over 50% cap
++    await _run_session(svc, _guidance_rows_for("TestPortfolio", 200.0))
++    # Batch writer should NOT have been called (0 eligible rows)
++    portfolio_tools.portfolio_update_budget_batch.assert_not_called()
++
++
++# ---------------------------------------------------------------------------
++# AC-3: $10K session gate
++# ---------------------------------------------------------------------------
++
++
++async def test_cron_session_over_10k_total_fails_without_writes():
++    """AC-3: Session with cumulative change > $10K fails with MANUAL_CONFIRMATION_REQUIRED."""
++    from src.services.budget_update_service import BudgetUpdateConfig
++
++    # Two portfolios each +$6,000 = $12,000 total > $10K cap
++    # 30% change per portfolio — under 50% safety guard cap
++    portfolios = [
++        {"portfolioId": "P1", "name": "Portfolio1", "budget": {"amount": 20_000.0}},
++        {"portfolioId": "P2", "name": "Portfolio2", "budget": {"amount": 20_000.0}},
++    ]
++    guidance_rows = [
++        {"parent": "Portfolio1", "daily": {_TEST_DAY: 26_000.0}},  # +6000 = 30%
++        {"parent": "Portfolio2", "daily": {_TEST_DAY: 26_000.0}},  # +6000 = 30%
++    ]
++    svc, portfolio_tools = _make_service(
++        portfolios=portfolios,
++        config=BudgetUpdateConfig(max_change_pct=0.5, max_total_change=10_000.0),
++    )
++    result = await _run_session(svc, guidance_rows)
++
++    assert result["status"] == "failed", (
++        f"Expected status='failed', got '{result['status']}'. "
++        "Session with >$10K change must fail when force_large_change is not set."
++    )
++    errors = result.get("errors", [])
++    assert any(e.get("code") == "MANUAL_CONFIRMATION_REQUIRED" for e in errors), (
++        f"Expected error code MANUAL_CONFIRMATION_REQUIRED in errors, got: {errors}"
++    )
++    portfolio_tools.portfolio_update_budget_batch.assert_not_called()
++
++
++# ---------------------------------------------------------------------------
++# AC-4: Hard cap circuit breaker
++# ---------------------------------------------------------------------------
++
++
++async def test_hard_cap_circuit_breaker_blocks_150k_run_even_with_bypass_flags():
++    """AC-4: Hard cap blocks runs with absolute delta > $100K regardless of bypass flags."""
++    from src.services.budget_update_service import BudgetUpdateConfig
++
++    # Portfolio at $1M, guidance at $1.15M — delta $150K > $100K hard cap
++    # 15% change so 50% guard won't trigger; $150K > $10K so session gate would trigger
++    # but force_large_change=True bypasses session gate — hard cap must still block
++    portfolios = [
++        {"portfolioId": "P1", "name": "BigPortfolio", "budget": {"amount": 1_000_000.0}},
++    ]
++    guidance_rows = [{"parent": "BigPortfolio", "daily": {"Mon": 1_150_000.0}}]
++    svc, portfolio_tools = _make_service(
++        portfolios=portfolios,
++        config=BudgetUpdateConfig(
++            max_change_pct=0.5,
++            max_total_change=10_000.0,
++            hard_cap_total_change=100_000.0,
++        ),
++    )
++
++    result = await _run_session(
++        svc,
++        guidance_rows,
++        skip_safety_guards=True,   # both bypass flags forced — hard cap must still block
++        force_large_change=True,
++    )
++
++    assert result["status"] == "failed", (
++        f"Expected status='failed', got '{result['status']}'. "
++        "Hard cap must block even when both bypass flags are True."
++    )
++    errors = result.get("errors", [])
++    assert any(e.get("code") == "HARD_CAP_EXCEEDED" for e in errors), (
++        f"Expected HARD_CAP_EXCEEDED error, got: {errors}"
++    )
++    portfolio_tools.portfolio_update_budget_batch.assert_not_called()
++
++
++def test_hard_cap_floor_prevents_env_override_to_zero():
++    """AC-4: Hard cap floor prevents env override from disabling the cap entirely."""
++    from src.services import budget_update_service as bus
++
++    assert hasattr(bus, "_HARD_CAP_FLOOR"), "Missing _HARD_CAP_FLOOR constant"
++    assert bus._HARD_CAP_FLOOR > 0, "_HARD_CAP_FLOOR must be > 0"
++
++
++# ---------------------------------------------------------------------------
++# AC-5: Bypass primitives are importable
++# ---------------------------------------------------------------------------
++
++
++async def test_acquire_cron_write_bypass_exists():
++    """AC-5: acquire_cron_write_bypass and release_cron_write_bypass must be importable."""
++    from src.tools._write_guard import acquire_cron_write_bypass, release_cron_write_bypass
++
++    assert callable(acquire_cron_write_bypass)
++    assert callable(release_cron_write_bypass)
++
++
++# ---------------------------------------------------------------------------
++# AC-6: Scoped bypass does not affect concurrent requests
++# ---------------------------------------------------------------------------
++
++
++async def test_cron_scoped_bypass_does_not_affect_concurrent_requests():
++    """AC-6: During cron bypass, concurrent writes from unrelated tasks still get READ_ONLY_MODE."""
++    from src.tools._write_guard import (
++        acquire_cron_write_bypass,
++        check_write_allowed,
++        release_cron_write_bypass,
++    )
++    import src.tools._write_guard as wg
++
++    orig_ro = wg._read_only_override
++    wg._read_only_override = True
++    try:
++        user_result: list = []
++
++        async def concurrent_user_write():
++            """Simulated concurrent request — no bypass token in its context."""
++            r = await check_write_allowed("portfolio_update_budget")
++            user_result.append(r)
++
++        # Create user task BEFORE acquiring bypass — captures context WITHOUT bypass token
++        user_task = asyncio.create_task(concurrent_user_write())
++
++        # Acquire bypass in the current (cron) context
++        token = acquire_cron_write_bypass("profile_abc", "session_xyz")
++        try:
++            # Yield control so the user task can run (its context has no bypass token)
++            await asyncio.sleep(0)
++            await user_task
++
++            # Cron's own write — should be ALLOWED (bypass token in current context)
++            cron_result = await check_write_allowed("portfolio_update_budget")
++            assert cron_result is None, (
++                f"Cron's own write should be allowed with bypass token, got: {cron_result}"
++            )
++
++            # Concurrent user write — should be BLOCKED
++            assert len(user_result) == 1, "user_task should have completed"
++            assert user_result[0] is not None, (
++                "Concurrent user write should be blocked (returned error dict, not None)"
++            )
++            # problem_dict puts the code in extensions AND as error_code at the top level
++            blocked = user_result[0]
++            code = (
++                blocked.get("code")
++                or blocked.get("error_code")
++                or (blocked.get("extensions") or {}).get("code")
++            )
++            assert code == "READ_ONLY_MODE", (
++                f"Expected READ_ONLY_MODE, got: {blocked}"
++            )
++        finally:
++            release_cron_write_bypass(
++                token, profile_id="profile_abc", session_id="session_xyz"
++            )
++    finally:
++        wg._read_only_override = orig_ro
++
++
++# ---------------------------------------------------------------------------
++# AC-7: Bypass released on crash
++# ---------------------------------------------------------------------------
++
++
++async def test_bypass_released_when_cron_raises_mid_run():
++    """AC-7: If cron crashes, bypass is released and read-only posture restored."""
++    from src.tools._write_guard import (
++        _active_bypass_tokens,
++        _cron_bypass_ctx,
++        acquire_cron_write_bypass,
++        get_read_only_mode,
++        release_cron_write_bypass,
++    )
++    import src.tools._write_guard as wg
++
++    orig_ro = wg._read_only_override
++    wg._read_only_override = True  # ensure server is in read-only mode
++    token = None
++    try:
++        token = acquire_cron_write_bypass("crash_profile", "crash_session")
++        assert token in _active_bypass_tokens, "Token should be active after acquire"
++        raise RuntimeError("Simulated cron crash")
++    except RuntimeError:
++        pass  # expected
++    finally:
++        if token is not None:
++            release_cron_write_bypass(
++                token, profile_id="crash_profile", session_id="crash_session"
++            )
++        # Check invariants while _read_only_override is still True (we set it above).
++        # The bypass mechanism must NOT have changed it — only _active_bypass_tokens and
++        # _cron_bypass_ctx are modified by acquire/release.
++        assert token not in _active_bypass_tokens, (
++            "Token should be removed from _active_bypass_tokens after release"
++        )
++        assert get_read_only_mode() is True, (
++            "Server read-only mode must be True after cron crash — "
++            "bypass must not permanently lower guard"
++        )
++        assert _cron_bypass_ctx.get() is None, (
++            "ContextVar should be None after release_cron_write_bypass"
++        )
++        # Restore original state for test isolation
++        wg._read_only_override = orig_ro
++
++
++# ---------------------------------------------------------------------------
++# AC-8: Structured log lines
++# ---------------------------------------------------------------------------
++
++
++async def test_structured_logs_emitted_for_bypass_acquire_and_release(caplog):
++    """AC-8: acquire/release emit structured log lines with profile_id and session_id."""
++    from src.tools._write_guard import acquire_cron_write_bypass, release_cron_write_bypass
++    import src.tools._write_guard as wg
++
++    orig_ro = wg._read_only_override
++    wg._read_only_override = True
++    try:
++        with caplog.at_level(logging.INFO, logger="src.tools._write_guard"):
++            token = acquire_cron_write_bypass("prof_log_test", "sess_log_test")
++            release_cron_write_bypass(
++                token, profile_id="prof_log_test", session_id="sess_log_test"
++            )
++        log_text = "\n".join(r.message for r in caplog.records)
++        assert "cron_write_bypass_acquired" in log_text, (
++            f"Expected 'cron_write_bypass_acquired' in logs. Got:\n{log_text}"
++        )
++        assert "cron_write_bypass_released" in log_text, (
++            f"Expected 'cron_write_bypass_released' in logs. Got:\n{log_text}"
++        )
++        assert "prof_log_test" in log_text, "profile_id should appear in log"
++    finally:
++        wg._read_only_override = orig_ro
++
++
++async def test_hard_cap_log_emitted_on_hard_cap_block(caplog):
++    """AC-8: Hard cap hit emits a structured log line at ERROR level."""
++    from src.services.budget_update_service import BudgetUpdateConfig
++
++    portfolios = [
++        {"portfolioId": "P1", "name": "BigPortfolio", "budget": {"amount": 1_000_000.0}}
++    ]
++    guidance_rows = [{"parent": "BigPortfolio", "daily": {"Mon": 1_150_000.0}}]
++    svc, _ = _make_service(
++        portfolios=portfolios,
++        config=BudgetUpdateConfig(hard_cap_total_change=100_000.0),
++    )
++
++    with caplog.at_level(logging.ERROR, logger="src.services.budget_update_service"):
++        await _run_session(
++            svc,
++            guidance_rows,
++            skip_safety_guards=True,
++            force_large_change=True,
++        )
++
++    log_text = "\n".join(r.message for r in caplog.records)
++    assert "hard_cap" in log_text.lower() or "HARD_CAP" in log_text, (
++        f"Expected hard cap log message. Got:\n{log_text}"
++    )
++
++
++# ---------------------------------------------------------------------------
++# External API Write Safety (MANDATORY — CLAUDE.md § External API Write Safety Rule 3)
++# ---------------------------------------------------------------------------
++
++
++async def test_no_outbound_http_to_amazon():
++    """MANDATORY: No test in this suite may reach advertising-api.amazon.com.
++
++    Verifies that acquire/release bypass functions are purely in-process
++    (ContextVar + set) and make zero outbound HTTP calls.
++    """
++    import httpx
++
++    from src.tools._write_guard import acquire_cron_write_bypass, release_cron_write_bypass
++    import src.tools._write_guard as wg
++
++    orig_ro = wg._read_only_override
++    wg._read_only_override = True
++
++    call_log: list[str] = []
++
++    async def mock_send(self, request, *args, **kwargs):  # type: ignore[override]
++        url = str(request.url)
++        call_log.append(url)
++        assert "advertising-api.amazon.com" not in url, (
++            f"SAFETY VIOLATION: outbound HTTP call to Amazon: {url}"
++        )
++        raise httpx.ConnectError(f"Test blocked outbound call to {url}")
++
++    try:
++        with patch.object(httpx.AsyncClient, "send", mock_send):
++            token = acquire_cron_write_bypass("test_profile", "test_session")
++            release_cron_write_bypass(
++                token, profile_id="test_profile", session_id="test_session"
++            )
++    finally:
++        wg._read_only_override = orig_ro
++
++    # acquire_cron_write_bypass must be a plain (sync) function — no HTTP in bypass path
++    assert not asyncio.iscoroutinefunction(acquire_cron_write_bypass), (
++        "acquire_cron_write_bypass should be a plain function, not async "
++        "(no HTTP calls allowed in the bypass path)"
++    )

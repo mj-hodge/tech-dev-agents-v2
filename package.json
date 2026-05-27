@@ -1,0 +1,12 @@
+{
+  "name": "tech-dev-agents",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "e2e": "playwright test",
+    "e2e:smoke": "playwright test --grep @smoke"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1"
+  }
+}

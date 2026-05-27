@@ -1,0 +1,18 @@
+--- a/.sdlc/skills/phase-1/SKILL.md
++++ b/.sdlc/skills/phase-1/SKILL.md
+@@ -1,4 +1,16 @@
+ # Phase 1: Business Analyst
+
++## Frontend Story Detection (REQUIRED)
++
++If the story involves any frontend changes (React components, CSS, HTML, Playwright
++specs, or dashboard/UI work), the seed's ## Acceptance Diff MUST list at least one
++Playwright spec file:
++
++  - `e2e/<feature-area>.spec.ts` — Playwright smoke spec tagged @smoke
++
++The SDLC framework enforces this at runtime: the Phase 7 gate and Acceptance Diff
++gate both block completion for frontend stories without a Playwright spec.
++
++**Rule:** frontend Acceptance Diff MUST contain `e2e/*.spec.{ts,tsx,js}`. MUST, not SHOULD.
++

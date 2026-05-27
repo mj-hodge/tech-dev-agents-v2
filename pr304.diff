@@ -1,0 +1,269 @@
+diff --git a/features/story-304-cole-curator-skill/test-design.md b/features/story-304-cole-curator-skill/test-design.md
+new file mode 100644
+index 00000000..1874087b
+--- /dev/null
++++ b/features/story-304-cole-curator-skill/test-design.md
+@@ -0,0 +1,174 @@
++# STORY-304: Cole the Curator Skill — Test Design
++
++**Story:** STORY-304 — Cole the Curator skill (Morris persona extension)
++**Phase:** 7 (Test Design)
++**Date:** 2026-05-04
++**Scope:** Small
++**State:** GREEN — 71 passed (25 in test_curator_skill.py, 46 in test_curator_teams_qa.py)
++
++---
++
++## Test Strategy
++
++**Framework:** pytest
++**Module under test:** `deployment/vm/skills/morris/curator/curator.py`, `deployment/vm/skills/morris/curator/teams_qa.py`
++**Import strategy:** `importlib.util.spec_from_file_location` (non-package layout — skill files live outside `sys.path`)
++**Mock strategy:** Pure-function helpers tested with dict-based mock filesystems. No real I/O. Teams Q&A tested with `AsyncMock`/`MagicMock` for external dependencies.
++**Coverage target:** 100% of acceptance criteria mapped to at least one test.
++
++---
++
++## Test File Layout
++
++```
++tests/deployment/
++  test_curator_skill.py         — SC-1,2,3,4,5,6 (25 tests)
++  test_curator_teams_qa.py      — SC-3,4,5 Teams Q&A delivery (46 tests)
++```
++
++Total: **71 tests** (71 passed, 0 failed, 0 errors)
++
++---
++
++## SC-to-Test Mapping
++
++| SC | Description | Test Class / Function | File | Status |
++|----|-------------|----------------------|------|--------|
++| SC-1 | `SKILL.md` written at `deployment/vm/skills/morris/curator/` | Verified by file existence + SKILL.md frontmatter | SKILL.md | ✅ |
++| SC-2 | Skill invokable via Morris's skill loader pattern | Morris SOUL.md references `skill_view("curator")` | SOUL-morris.md | ✅ |
++| SC-3 | Curation plan JSON schema documented and valid | `TestPlanSchemaValid` (3 tests), `TestFullCurationCycle` | test_curator_skill.py | ✅ |
++| SC-4 | Question/answer protocol documented | `TestQuestionGeneration`, `TestFormatReplyInstructions` | test_curator_skill.py | ✅ |
++| SC-4 | Q&A reply parsing, default application, timeout | `TestParseMarkReply`, `TestApplyDefaults`, `TestTimeoutHandling` | test_curator_teams_qa.py | ✅ |
++| SC-5 | Auto-merge logic implemented (criteria defined) | `TestAutoMergeDecision` | test_curator_teams_qa.py | ✅ |
++| SC-6 | Tests green | All 71 tests pass | both files | ✅ |
++| SC-7 | Morris SOUL updated to reference curator skill | Grep verification: `skill_view("curator")` in SOUL-morris.md | SOUL-morris.md | ✅ |
++
++---
++
++## Test Groups — `test_curator_skill.py` (25 tests)
++
++### build_curation_plan() — Unit Tests
++
++| # | Test Class | Count | What It Verifies |
++|---|-----------|-------|------------------|
++| 1 | `TestNewPageDetected` | 2 | Scratch files not in wiki → new_pages entry with source attribution |
++| 2 | `TestInferCategory` | 5 | Edge cases: flat paths → `uncategorised`, nested paths → category dir, bare filenames |
++| 3 | `TestUpdatedPageDetected` | 1 | Scratch overlapping wiki stem → updated_pages entry |
++| 4 | `TestDedupDetected` | 1 | Same stem in scratch + wiki → dedup_actions with canonical + merge_in |
++| 5 | `TestStaleClaim` | 2 | `_(as of YYYY-MM-DD)_` older than 180 days flagged; recent dates pass |
++| 6 | `TestBrokenXref` | 2 | `[[nonexistent-page]]` flagged; valid `[[page]]` passes |
++| 7 | `TestOrphanDetected` | 1 | Wiki file missing from index.md → orphan lint finding |
++| 8 | `TestEmptyScratch` | 1 | Empty scratch → empty plan (lint findings may still exist) |
++| 9 | `TestPlanSchemaValid` | 3 | JSON serialization, `wiki/` path prefix, `q\d+` question ID format |
++| 10 | `TestQuestionGeneration` | 2 | Conflicting content → questions; 15 conflicts → max 10 questions |
++
++### format_questions_for_teams() — Unit Tests
++
++| # | Test Class | Count | What It Verifies |
++|---|-----------|-------|------------------|
++| 11 | `TestFormatSingleQuestion` | 1 | Single question includes Q1, context, default, question text |
++| 12 | `TestFormatMultipleQuestions` | 1 | 5 questions → all Q1–Q5 present in output |
++| 13 | `TestFormatEmptyQuestions` | 1 | Empty list → `None` |
++| 14 | `TestFormatReplyInstructions` | 1 | Output contains "Reply format" and "Q1: yes" example |
++
++### Integration
++
++| # | Test Class | Count | What It Verifies |
++|---|-----------|-------|------------------|
++| 15 | `TestFullCurationCycle` | 1 | Full mock filesystem → plan with new pages, dedup, lint findings, questions; JSON serializable; Teams format includes "Cole (Morris-as-curator)" identity |
++
++---
++
++## Test Groups — `test_curator_teams_qa.py` (46 tests)
++
++### Message Formatting
++
++Tests that the Teams message for Mark follows the specified format with context, questions, proposed defaults, and reply instructions.
++
++### Reply Parsing
++
++Tests that Mark's replies (e.g., `Q1: yes`, `Q1: actually quarterly`, `Q1: skip`) are correctly parsed and applied to the curation plan.
++
++### Default Application
++
++Tests that after 24-hour timeout, proposed defaults are automatically applied to unanswered questions.
++
++### Q&A Archiving
++
++Tests that question/answer exchanges are saved to `sources/<date>-curator-q-and-a/` for provenance.
++
++### Auto-Merge Decision
++
++Tests the decision matrix:
++- 0 outstanding questions + CI green → auto-merge
++- Any `TODO(cole/qN)` markers → wait for Mark
++- Mark answers all → update PR → auto-merge
++- 24h timeout → apply defaults → auto-merge
++
++### Integration Cycle
++
++End-to-end mock test: question batch → Teams delivery → reply parsing → plan update → merge decision.
++
++---
++
++## Mock Strategy
++
++| Dependency | Mock Type | Rationale |
++|-----------|-----------|-----------|
++| Filesystem (scratch, wiki, sources) | `dict[str, str]` | Pure function — no real I/O needed |
++| `today` date parameter | `date(2026, 4, 16)` | Deterministic stale-claim detection |
++| Teams API | `AsyncMock` | No real Teams messages in tests |
++| GitHub CLI (`gh`) | `MagicMock` | Auto-merge decision tested in isolation |
++| `delegate_task` (Haiku) | Not mocked | Not used by curator.py helper functions |
++
++---
++
++## Fixtures
++
++| Fixture | Scope | Description |
++|---------|-------|-------------|
++| `empty_scratch` | function | Empty dict — tests empty-input path |
++| `empty_wiki` | function | Empty dict |
++| `sample_wiki` | function | 2 wiki pages: one with stale claim + broken xref, one orphan |
++| `sample_index` | function | Index listing only `tech-datawarehouse.md` |
++| `sample_scratch` | function | 2 scratch files: one new, one overlapping wiki |
++
++---
++
++## Run Commands
++
++```bash
++# Run curator helper tests
++python3 -m pytest tests/deployment/test_curator_skill.py -v
++
++# Run Teams Q&A tests
++python3 -m pytest tests/deployment/test_curator_teams_qa.py -v
++
++# Run all STORY-304 tests together
++python3 -m pytest tests/deployment/test_curator_skill.py tests/deployment/test_curator_teams_qa.py -v
++
++# Verify zero regressions on full deployment suite
++python3 -m pytest tests/deployment/ -q
++```
++
++---
++
++## Current State Verification
++
++```
++$ python3 -m pytest tests/deployment/test_curator_skill.py tests/deployment/test_curator_teams_qa.py -q
++71 passed, 1 warning in 0.58s
++```
++
++All 71 tests GREEN. Implementation (curator.py, teams_qa.py, SKILL.md) was completed alongside test authoring. Morris SOUL updated to reference curator skill.
++
++---
++
++## Phase 8 Scope
++
++Phase 8 verifies that all success criteria are met end-to-end:
++- SKILL.md is loadable by Morris's skill framework
++- Curation plan round-trips through JSON correctly
++- Teams Q&A delivery integrates with STORY-305 mechanism
++- Auto-merge logic gates on question resolution
++- No regressions in Morris's other skills
+diff --git a/features/story-304-event-driven-presence/test-design.md b/features/story-304-event-driven-presence/test-design.md
+index df1f29d4..6fc0931b 100644
+--- a/features/story-304-event-driven-presence/test-design.md
++++ b/features/story-304-event-driven-presence/test-design.md
+@@ -1,28 +1,67 @@
+ # STORY-304: Test Design
+ 
+ **Phase:** 7 (Test Design)
+-**Target:** RED state — all tests written, all failing
++**Scope:** Small
++**Target:** RED state — all tests written, all failing (prior to Phase 8 implementation)
+ 
+ ## Test Matrix
+ 
+ | ID | Test | AC | File |
+ |----|------|----|------|
+-| T01 | POST /internal/presence sets Teams presence via Graph API | AC-1 | test_event_driven_presence.py |
+-| T02 | POST /internal/presence rejects missing/invalid API key | AC-1 | test_event_driven_presence.py |
+-| T03 | POST /internal/presence rejects malformed body | AC-1 | test_event_driven_presence.py |
+-| T04 | Dispatch claim triggers Busy push to agent gateway | AC-2 | test_event_driven_presence.py |
+-| T05 | Dispatch complete triggers Available push to agent gateway | AC-3 | test_event_driven_presence.py |
+-| T06 | Dispatch fail triggers Available push to agent gateway | AC-3 | test_event_driven_presence.py |
+-| T07 | Dispatch cancel triggers Available push to agent gateway | AC-3 | test_event_driven_presence.py |
+-| T08 | Presence push fails silently on unreachable agent | AC-6 | test_event_driven_presence.py |
+-| T09 | _presence_monitor_loop and _is_busy removed from TeamsAdapter | AC-4 | test_event_driven_presence.py |
+-| T10 | Morris heartbeat: sdk+inbox active → Busy | AC-5 | test_event_driven_presence.py |
+-| T11 | Morris heartbeat: idle → Available | AC-5 | test_event_driven_presence.py |
+-| T12 | Agent IP captured during dispatch registration | AC-2 | test_event_driven_presence.py |
++| T01 | Valid presence payload passes validation | AC-1 | `test_presence_endpoint.py` |
++| T02 | POST /internal/presence requires X-API-Key matching OPS_CONSOLE_API_KEY | AC-1 | `test_presence_endpoint.py` |
++| T03 | Invalid JSON body returns 400 | AC-1 | `test_presence_endpoint.py` |
++| T04 | Missing required fields in payload returns 400 | AC-1 | `test_presence_endpoint.py` |
++| T05 | Valid presence request enqueues update via _enqueue_presence | AC-1 | `test_presence_endpoint.py` |
++| T06 | push_presence sends Busy/InACall on claim event | AC-2 | `test_presence_push.py` |
++| T07 | push_presence sends Available/Available on complete event | AC-3 | `test_presence_push.py` |
++| T08 | push_presence sends Available/Available on fail event | AC-3 | `test_presence_push.py` |
++| T09 | push_presence retries with backoff on ConnectionError, fails silently | AC-6 | `test_presence_push.py` |
++| T10 | push_presence retries on 5xx, no retry on 4xx (except 401) | AC-6 | `test_presence_push.py` |
++| T11 | URL resolution from agent registry (host:port) | AC-2 | `test_presence_push.py` |
++| T12 | OPS_CONSOLE_API_KEY included in X-API-Key header | AC-1 | `test_presence_push.py` |
++| T13 | push_presence fails silently when agent not in registry | AC-6 | `test_presence_push.py` |
++| T14 | Morris heartbeat: sdk_count > 0 returns Busy | AC-5 | `test_morris_presence.py` |
++| T15 | Morris heartbeat: unread_inbox > 0 returns Busy | AC-5 | `test_morris_presence.py` |
++| T16 | Morris heartbeat: both active returns Busy | AC-5 | `test_morris_presence.py` |
++| T17 | Morris heartbeat: both zero returns Available | AC-5 | `test_morris_presence.py` |
++| T18 | Morris heartbeat: negative values treated as zero (Available) | AC-5 | `test_morris_presence.py` |
++| T19 | _presence_monitor_loop removed from TeamsAdapter | AC-4 | `test_teams_m365_cleanup.py` |
++| T20 | _is_busy not referenced in TeamsAdapter source | AC-4 | `test_teams_m365_cleanup.py` |
++| T21 | _presence_task not created in connect() | AC-4 | `test_teams_m365_cleanup.py` |
++| T22 | _set_presence method still exists (used by presence endpoint) | AC-4 | `test_teams_m365_cleanup.py` |
++| T23 | claim_story dispatch route triggers push_presence(Busy) | AC-2 | `test_dispatch_presence_integration.py` |
++| T24 | complete_story dispatch route triggers push_presence(Available) | AC-3 | `test_dispatch_presence_integration.py` |
++| T25 | fail_story dispatch route triggers push_presence(Available) | AC-3 | `test_dispatch_presence_integration.py` |
++| T26 | cancel_story does NOT trigger presence push | AC-3 | `test_dispatch_presence_integration.py` |
++| T27 | Presence push failure does not break dispatch operations | AC-6 | `test_dispatch_presence_integration.py` |
++
++## AC Coverage
++
++| AC | Tests | Coverage |
++|----|-------|----------|
++| AC-1: POST /internal/presence endpoint with API key auth | T01-T05, T12 | Endpoint validation, auth, happy path |
++| AC-2: Dispatch claim pushes Busy | T06, T11, T23 | Push service + dispatch integration |
++| AC-3: Dispatch complete/fail/cancel pushes Available | T07, T08, T24-T26 | All terminal transitions |
++| AC-4: _presence_monitor_loop and _is_busy removed | T19-T22 | Source inspection + structural checks |
++| AC-5: Morris heartbeat presence logic | T14-T18 | All combinations of sdk_count/unread_inbox |
++| AC-6: Backward compat — silent failure | T09, T10, T13, T27 | Retry, backoff, fault isolation |
+ 
+ ## Test Strategy
+ 
+-- Mock Graph API calls (no real Microsoft auth)
+-- Mock HTTP calls to agent gateways (no real agent VMs)
+-- Use pytest fixtures for dispatch DB service (async mock)
+-- Verify TeamsAdapter code structure via inspection (hasattr checks)
++- **Mock Graph API calls** — no real Microsoft auth; presence updates are verified via mock assertions
++- **Mock HTTP calls to agent gateways** — no real agent VMs; `httpx`/`aiohttp` clients are patched
++- **Async mock fixtures** for dispatch DB service (`AsyncMock`)
++- **Source inspection** for removal verification (AC-4) — `hasattr` checks and source file grep
++- **Fault injection** — ConnectionError, 5xx responses to verify silent failure (AC-6)
++- **No external API calls** — all tests are fully isolated (per External API Write Safety policy)
++
++## Test Files
++
++| File | AC | Tests |
++|------|-----|-------|
++| `tests/story_304/test_presence_endpoint.py` | AC-1 | 5 tests — endpoint handler validation, auth, request processing |
++| `tests/story_304/test_presence_push.py` | AC-2, AC-6 | 8 tests — ops-console push service, retry, backoff, silent failure |
++| `tests/story_304/test_morris_presence.py` | AC-5 | 5 tests — heartbeat-driven presence computation |
++| `tests/story_304/test_teams_m365_cleanup.py` | AC-4 | 4 tests — removal of old polling code |
++| `tests/story_304/test_dispatch_presence_integration.py` | AC-2, AC-3, AC-6 | 5 tests — dispatch route → presence push integration |

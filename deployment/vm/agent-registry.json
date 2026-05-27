@@ -1,0 +1,50 @@
+{
+  "agents": [
+    {
+      "name": "dan",
+      "email": "tech-agent-dan@gorillacommerce.co",
+      "vm": "vm-dan-agent-dev",
+      "ip": "20.228.224.243",
+      "ssh_port": 443,
+      "status": "active"
+    },
+    {
+      "name": "derrick",
+      "email": "tech-agent-derrick@gorillacommerce.co",
+      "vm": "vm-derrick-agent-dev",
+      "ip": "20.121.210.186",
+      "ssh_port": 443,
+      "status": "active"
+    },
+    {
+      "name": "morris",
+      "email": "tech-agent-morris@gorillacommerce.co",
+      "vm": "vm-morris-agent-dev",
+      "ip": "20.246.36.143",
+      "ssh_port": 443,
+      "role": "manager",
+      "status": "active",
+      "loki_label": "morris-vm"
+    },
+    {
+      "name": "daisy",
+      "email": "tech-agent-daisy@gorillacommerce.co",
+      "vm": "vm-daisy-dev",
+      "ip": "20.98.231.234",
+      "ssh_port": 443,
+      "role": "developer",
+      "status": "active",
+      "region": "eastus2"
+    },
+    {
+      "name": "devon",
+      "email": "tech-agent-devon@gorillacommerce.co",
+      "vm": "vm-devon-dev",
+      "ip": "20.186.26.130",
+      "ssh_port": 443,
+      "role": "developer",
+      "status": "active",
+      "region": "eastus2"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "source": "ccusage",
+  "current_block_tokens": 412900,
+  "current_block_cost_usd": 1.87,
+  "time_remaining_minutes": 163,
+  "block_start": "15:00 UTC",
+  "block_end": "20:00 UTC",
+  "p90_limit": 792000,
+  "sessions_in_block": 7,
+  "percent_used": 52.1,
+  "remaining_tokens": 379100,
+  "error": null
+}

@@ -1,0 +1,28 @@
+# Morris Orchestrator Configuration
+# Managed by: Morris (Engineering Manager)
+# Last updated: 2026-04-26 (STORY-727 — Continuous Self-Improvement Loop)
+
+[morris]
+# Global Morris orchestrator settings (established by STORY-724)
+# See deployment/morris/scripts/orchestrator_config.yaml for full config.
+
+[morris.improvement]
+# Self-improvement loop settings (STORY-727)
+# Default: disabled, shadow mode. Flip enabled=true and mode="live" after
+# completing the shadow-mode bake described in STORY-727 Validation §2.
+
+enabled = false                    # Master kill switch. When false, all cron scripts are no-ops.
+mode = "shadow"                    # "shadow" | "live"
+                                   # shadow: proposals generated + stored, but no DM to Mark
+                                   # live: proposals DM'd to Mark for approval
+
+pattern_window_days = 7            # DB failure-reason aggregation window
+adversarial_window_days = 30       # adversarial-review.md scan window (longer — reviews less frequent)
+threshold_critical = 3             # Min stories per CRITICAL-class adversarial pattern
+threshold_high = 4                 # Higher bar for HIGH-class findings (less certain signal)
+taxonomy_gap_fraction = 0.20       # Fraction of 'unknown' failures triggering taxonomy-gap proposal
+retry_storm_window_seconds = 60    # Max total elapsed for 3+ retries to count as storm
+retry_storm_min_stories = 3        # Min stories in 7d to trigger retry_storm pattern
+reproposal_cooldown_days = 30      # Rejected proposals suppressed for this long before re-proposing
+tracking_window_days = 14          # Check metric N days after proposal applied
+cost_ceiling_monthly_usd = 15.0    # Alert Mark if Sonnet spend on proposals exceeds this/month

@@ -1,0 +1,14 @@
+--- a/.sdlc/skills/phase-8/SKILL.md
++++ b/.sdlc/skills/phase-8/SKILL.md
+@@ -1,4 +1,12 @@
+ # Phase 8: Senior Developer
+
++## Playwright Gate (Frontend Stories)
++
++For any frontend story (Acceptance Diff contains `.tsx`/`.jsx`/`.css` files or
++seed mentions "dashboard", "UI", "frontend"), Phase 8 MUST:
++
++1. Run `npx playwright test --grep @smoke` and confirm GREEN before reporting complete.
++2. Commit any new `e2e/screenshots/` baselines alongside the implementation code.
++3. Verify the CI `playwright-frontend-tests` job passes on the PR before marking Done.
++

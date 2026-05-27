@@ -1,0 +1,79 @@
+# Morris crontab — updated 2026-04-27 (low-usage mode, business hours boosted)
+# Business hours: 8am-6pm ET = 12-22 UTC. Off overnight.
+# Cron results → /home/hermes/state/morris/cron-status.md (NOT memory)
+# Heartbeat writes fleet-status.md + pr-tracker.md directly
+# Overnight = 1:00-9:59 UTC (9pm-6am ET) — 4x slower
+
+# === DATA COLLECTORS (write to state files directly) ===
+
+# Morris Heartbeat — every 1h business hours (12-22 UTC / 8am-6pm ET), off overnight
+0 12-22 * * * /home/hermes/.hermes/scripts/run_cron.sh "Morris Heartbeat" /home/hermes/.hermes/scripts/heartbeat-collector.py
+
+# === ESCALATION CHECK (Claude Code — lightweight) ===
+
+# Morris State Sync — every 2h business hours (12-22 UTC / 8am-6pm ET), off overnight
+0 12,14,16,18,20,22 * * * /home/hermes/.hermes/scripts/run_cron.sh "Morris State Sync (2h)" /home/hermes/.hermes/scripts/sdk_state_sync.py
+
+# Foundry Pace Check — every 1h daytime (10-0 UTC), every 4h overnight (1-9 UTC)
+#PAUSED# 5 10-23 * * * /home/hermes/.hermes/scripts/run_cron.sh "Foundry Pace Check" /home/hermes/.hermes/scripts/foundry_pace_check.py
+#PAUSED# 5 0 * * * /home/hermes/.hermes/scripts/run_cron.sh "Foundry Pace Check" /home/hermes/.hermes/scripts/foundry_pace_check.py
+#PAUSED# 5 4,8 * * * /home/hermes/.hermes/scripts/run_cron.sh "Foundry Pace Check (overnight)" /home/hermes/.hermes/scripts/foundry_pace_check.py
+
+# === DAILY JOBS ===
+
+# Morris Daily Standup — weekdays 10:00 UTC (6:00 AM ET)
+0 10 * * 1-5 /home/hermes/.hermes/scripts/run_cron.sh "Morris Daily Standup" /home/hermes/.hermes/scripts/standup-collector.py
+
+# Morris PR Review Cycle — every 2h business hours (12-22 UTC / 8am-6pm ET), off overnight
+0 12,14,16,18,20,22 * * * /home/hermes/.hermes/scripts/run_cron.sh "Morris PR Review Cycle (2h)" /home/hermes/.hermes/scripts/sdk_pr_review_cycle.py
+
+# Morris Daily Tech Research — 9:00 UTC
+#PAUSED# 0 9 * * * /home/hermes/.hermes/scripts/run_cron.sh "Morris Daily Tech Research" /home/hermes/.hermes/scripts/sdk_daily_tech_research.py
+
+# Morris Daily Conversation Synthesis — 5:00 UTC
+#PAUSED# 0 5 * * * /home/hermes/.hermes/scripts/run_cron.sh "Morris Daily Conversation Synthesis" /home/hermes/.hermes/scripts/sdk_daily_conversation_synthesis.py
+
+# Morris Nightly Git Push — 4:00 UTC
+0 4 * * * /home/hermes/.hermes/scripts/run_cron.sh "Morris Nightly Git Push" /home/hermes/.hermes/scripts/sdk_nightly_git_push.py
+
+# Nightly SDLC Compliance Audit — 5:00 UTC
+#PAUSED# 0 5 * * * /home/hermes/.hermes/scripts/run_cron.sh "Nightly SDLC Compliance Audit" /home/hermes/.hermes/scripts/sdk_sdlc_audit.py
+
+# === WEEKLY JOBS ===
+
+# Morris Monday InfoSec Review — 5:00 UTC Monday
+#PAUSED# 0 5 * * 1 /home/hermes/.hermes/scripts/run_cron.sh "Morris Monday InfoSec Review" /home/hermes/.hermes/scripts/sdk_infosec_review.py
+
+# Morris Weekly Backlog Review — 14:00 UTC Tuesday
+#PAUSED# 0 14 * * 2 /home/hermes/.hermes/scripts/run_cron.sh "Morris Weekly Backlog Review" /home/hermes/.hermes/scripts/sdk_weekly_backlog_review.py
+
+# Morris Wednesday Code Quality Review — 5:00 UTC Wednesday
+#PAUSED# 0 5 * * 3 /home/hermes/.hermes/scripts/run_cron.sh "Morris Wednesday Code Quality Review" /home/hermes/.hermes/scripts/sdk_code_quality_review.py
+
+# Morris Friday SRE Review — 5:00 UTC Friday
+#PAUSED# 0 5 * * 5 /home/hermes/.hermes/scripts/run_cron.sh "Morris Friday SRE Review" /home/hermes/.hermes/scripts/sdk_sre_review.py
+
+# Morris Friday Fleet Review — 10:00 UTC Friday
+#PAUSED# 0 10 * * 5 /home/hermes/.hermes/scripts/run_cron.sh "Morris Friday Fleet Review" /home/hermes/.hermes/scripts/sdk_fleet_review.py
+
+# Cole Curator Weekly — 13:00 UTC Sunday
+#PAUSED# 0 13 * * 0 /home/hermes/.hermes/scripts/run_cron.sh "cole-curator-weekly" /home/hermes/.hermes/scripts/sdk_cole_curator_weekly.py
+
+# morris-orchestrator-724
+*/10 * * * * set -a; . /opt/agent/.env; set +a; /opt/morris/venv/bin/python /opt/morris/orchestrator_loop.py --config /opt/morris/orchestrator_config.yaml >> /var/log/morris/orchestrator.log 2>&1
+30 13 * * 1-5 set -a; . /opt/agent/.env; set +a; /opt/morris/venv/bin/python /opt/morris/orchestrator_loop.py --briefing-only --config /opt/morris/orchestrator_config.yaml >> /var/log/morris/orchestrator.log 2>&1
+
+# morris-contact-tracking
+0 8 * * 1-5 set -a; . /opt/agent/.env; set +a; /opt/morris/venv/bin/python /opt/morris/daily_contact_summary.py --config /opt/morris/orchestrator_config.yaml >> /var/log/morris/orchestrator.log 2>&1
+
+# morris-foundry-pace-585
+5 * * * * set -a; . /opt/agent/.env; set +a; /opt/morris/venv/bin/python /opt/morris/foundry_pace_check.py >> /var/log/morris/foundry-pace.log 2>&1
+
+# morris-state-commit
+0 4 * * * /opt/morris/state-commit.sh >> /var/log/morris/state-commit.log 2>&1
+
+# Refresh cron-inventory.md every 5min — Morrisreads this for crontab visibility
+*/5 * * * * /home/hermes/.hermes/scripts/cron_inventory.py >/dev/null 2>&1
+
+# Daily review-context bundle refresh — feeds Morris review-prs skill Step 0
+0 6 * * * /home/hermes/.claude/skills/review-context-bundler/generate-bundle.py >> /var/log/morris/bundler.log 2>&1

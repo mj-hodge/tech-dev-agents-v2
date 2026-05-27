@@ -1,0 +1,26 @@
+# Ops Console dependencies
+# STORY-032: Created to support containerized deployment
+
+# Web framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+
+# HTTP client
+httpx>=0.27.0
+
+# Configuration
+pydantic>=2.7.0
+pydantic-settings>=2.3.0
+
+# Authentication (Entra ID JWT validation)
+PyJWT>=2.8.0
+cryptography>=42.0.0
+
+# Database (PostgreSQL async driver — optional, JSON fallback if unavailable)
+asyncpg>=0.29.0
+
+# Azure identity (managed identity credential — STORY-227)
+azure-identity>=1.15.0,<2.0.0
+
+# MSAL (Graph API token auto-refresh — STORY-228)
+msal>=1.28.0

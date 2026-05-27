@@ -1,0 +1,20 @@
+Rework of {{ original_story_id }} — {{ reason }}.
+
+{% if fresh_implementation -%}
+This is a FRESH implementation against current main. Do NOT reuse the old branch.
+
+{% endif -%}
+## Failures to address
+
+{% for failure in failure_list -%}
+{{ loop.index }}. {{ failure }}
+{% endfor %}
+
+## COMMIT AND PUSH (REQUIRED)
+
+git add -A
+git commit -m "{{ story_id }}: rework of {{ original_story_id }}"
+git push -u origin {{ story_id | lower }}/{{ story_id | lower }}
+gh pr create --title "{{ story_id }}: rework of {{ original_story_id }}" --body "Rework of {{ original_story_id }}. {{ reason }}"
+
+THIS IS NOT DONE UNTIL THE PR IS CREATED.

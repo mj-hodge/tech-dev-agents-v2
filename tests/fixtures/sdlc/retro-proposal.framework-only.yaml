@@ -1,0 +1,42 @@
+# retro-proposal.yaml
+# Golden fixture for SC-8 / REPLAY-4 regression: a retro with NO platform findings.
+# This file represents the SINGLE proposal emitted when the retro skill does NOT
+# detect pipeline/airflow/dbt/canon keywords — only standard framework findings.
+# No target_repo: gc-data-v2 at top level. No second file is emitted.
+version: 1
+project: tech-dev-agents
+epic: epic-1000
+date: 2026-05-01
+metrics:
+  stories: 3
+  tests: 28
+  fix_loops: 1
+proposals:
+  - id: F-001
+    finding: "Phase 7 RED tests were written without checking existing test patterns first"
+    category: Phase 7
+    severity: Medium
+    target_file: "agents/phase-7-test-design.md"
+    action: "Add Gate: Read existing tests/sdlc/ before writing new RED test files"
+    proposed_text: |
+      ## Gate 3: Read Existing Tests
+      - [ ] Read at least one existing test file in tests/sdlc/ before authoring new tests
+      - [ ] Reuse helpers (e.g., _read_skill()) from existing test modules
+      - [ ] Match the assertion message style of the test suite
+    evidence:
+      occurrences: 2
+      stories: ["STORY-1001", "STORY-1003"]
+  - id: F-002
+    finding: "Phase 8 implementation missed updating backlog.md after code was committed"
+    category: Phase 8
+    severity: Low
+    target_file: "agents/phase-8-implementation.md"
+    action: "Add post-commit checklist item: update backlog.md status"
+    proposed_text: |
+      ## Post-Commit Checklist
+      - [ ] backlog.md story status updated to In Progress or Done
+      - [ ] .project Phase Routing updated
+      - [ ] development-tasks.md task checked off
+    evidence:
+      occurrences: 1
+      stories: ["STORY-1002"]

@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "monday": {
+      "command": "/usr/bin/node",
+      "args": [
+        "/home/hermes/.monday-mcp/node_modules/@mondaydotcomorg/monday-api-mcp/dist/index.js",
+        "--token",
+        "eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjYzMTE3NDk1NSwiYWFpIjoxMSwidWlkIjoxMDA2OTcyNTEsImlhZCI6IjIwMjYtMDMtMTBUMTM6MTU6NTcuNDkwWiIsInBlciI6Im1lOndyaXRlIiwiYWN0aWQiOjEwMzgwMDk3LCJyZ24iOiJ1c2UxIn0.mL5uZz68plPFkKFmceEsDHbqkWCigaoYKfX86t1efOI"
+      ],
+      "allowedTools": [
+        "search",
+        "get_board_info",
+        "get_board_items_page",
+        "get_column_type_info",
+        "create_item",
+        "create_column",
+        "create_update",
+        "change_item_column_values",
+        "all_monday_api",
+        "get_user_context"
+      ]
+    }
+  }
+}

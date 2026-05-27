@@ -1,0 +1,33 @@
+{
+  "checks": [
+    {
+      "at": "2026-04-22T17:15:52.392405+00:00",
+      "queue_pending": 0,
+      "queue_claimed": 3,
+      "phase_ok": 0,
+      "phase_fail": 0,
+      "regressions": 0
+    },
+    {
+      "at": "2026-04-22T20:40:27.152786+00:00",
+      "queue_pending": 0,
+      "queue_claimed": 0,
+      "phase_ok": 0,
+      "phase_fail": 0,
+      "regressions": 0
+    },
+    {
+      "at": "2026-04-22T20:56:08.178792+00:00",
+      "queue_pending": 0,
+      "queue_claimed": 0,
+      "phase_ok": 0,
+      "phase_fail": 0,
+      "regressions": 0
+    }
+  ],
+  "total_completions": 0,
+  "total_failures": 0,
+  "started_at": "2026-04-22T17:15:52.392405+00:00",
+  "last_check": "2026-04-22T20:56:08.178792+00:00",
+  "regression_count": 0
+}

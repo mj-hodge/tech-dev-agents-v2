@@ -1,0 +1,243 @@
+2026-05-05T19:05:04.237805+00:00 check today_spend=$20.67 elapsed_h=19.08 pace=$1.08/h projected_eod=$25.99 threshold=$30.00/h floor=$50.00
+2026-05-05T20:05:05.005967+00:00 check today_spend=$20.67 elapsed_h=20.08 pace=$1.03/h projected_eod=$24.69 threshold=$30.00/h floor=$50.00
+2026-05-05T21:05:04.191912+00:00 check today_spend=$68.77 elapsed_h=21.08 pace=$3.26/h projected_eod=$78.28 threshold=$30.00/h floor=$50.00
+2026-05-05T22:05:04.578475+00:00 check today_spend=$68.77 elapsed_h=22.08 pace=$3.11/h projected_eod=$74.73 threshold=$30.00/h floor=$50.00
+2026-05-05T23:05:04.652561+00:00 check today_spend=$103.47 elapsed_h=23.08 pace=$4.48/h projected_eod=$107.57 threshold=$30.00/h floor=$50.00
+2026-05-06T00:05:02.284930+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-06T01:05:02.611447+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-06T02:05:02.984139+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-06T03:05:02.353508+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-06T04:05:03.914491+00:00 check today_spend=$0.00 elapsed_h=4.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-06T05:05:03.106406+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-06T06:05:02.224091+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-06T07:05:03.897566+00:00 check today_spend=$0.12 elapsed_h=7.08 pace=$0.02/h projected_eod=$0.41 threshold=$30.00/h floor=$50.00
+2026-05-06T08:05:04.654193+00:00 check today_spend=$1.01 elapsed_h=8.08 pace=$0.13/h projected_eod=$3.00 threshold=$30.00/h floor=$50.00
+2026-05-06T09:05:03.494688+00:00 check today_spend=$1.01 elapsed_h=9.08 pace=$0.11/h projected_eod=$2.67 threshold=$30.00/h floor=$50.00
+2026-05-06T10:05:04.124229+00:00 check today_spend=$4.27 elapsed_h=10.08 pace=$0.42/h projected_eod=$10.15 threshold=$30.00/h floor=$50.00
+2026-05-06T11:05:03.734467+00:00 check today_spend=$4.27 elapsed_h=11.08 pace=$0.38/h projected_eod=$9.24 threshold=$30.00/h floor=$50.00
+2026-05-06T12:05:02.340828+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-06T13:05:02.144405+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-06T14:05:04.767114+00:00 check today_spend=$7.37 elapsed_h=14.08 pace=$0.52/h projected_eod=$12.57 threshold=$30.00/h floor=$50.00
+2026-05-06T15:05:11.296555+00:00 check today_spend=$8.84 elapsed_h=15.09 pace=$0.59/h projected_eod=$14.06 threshold=$30.00/h floor=$50.00
+2026-05-06T16:05:04.736146+00:00 check today_spend=$8.84 elapsed_h=16.08 pace=$0.55/h projected_eod=$13.19 threshold=$30.00/h floor=$50.00
+2026-05-06T17:05:04.638298+00:00 check today_spend=$18.48 elapsed_h=17.08 pace=$1.08/h projected_eod=$25.96 threshold=$30.00/h floor=$50.00
+2026-05-06T18:05:02.335968+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-06T19:05:04.031700+00:00 check today_spend=$30.55 elapsed_h=19.08 pace=$1.60/h projected_eod=$38.42 threshold=$30.00/h floor=$50.00
+2026-05-06T20:05:04.196291+00:00 check today_spend=$30.55 elapsed_h=20.08 pace=$1.52/h projected_eod=$36.51 threshold=$30.00/h floor=$50.00
+2026-05-06T21:05:03.852372+00:00 check today_spend=$36.77 elapsed_h=21.08 pace=$1.74/h projected_eod=$41.86 threshold=$30.00/h floor=$50.00
+2026-05-06T22:05:04.698761+00:00 check today_spend=$36.77 elapsed_h=22.08 pace=$1.67/h projected_eod=$39.96 threshold=$30.00/h floor=$50.00
+2026-05-06T23:05:04.110813+00:00 check today_spend=$36.77 elapsed_h=23.08 pace=$1.59/h projected_eod=$38.23 threshold=$30.00/h floor=$50.00
+2026-05-07T00:05:03.195029+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-07T01:05:04.759292+00:00 check today_spend=$0.00 elapsed_h=1.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-07T02:05:03.573370+00:00 check today_spend=$0.00 elapsed_h=2.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-07T03:05:05.129034+00:00 check today_spend=$0.00 elapsed_h=3.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-07T04:05:03.371411+00:00 check today_spend=$0.00 elapsed_h=4.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-07T05:05:05.408496+00:00 check today_spend=$0.00 elapsed_h=5.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-07T06:05:04.523224+00:00 check today_spend=$0.05 elapsed_h=6.08 pace=$0.01/h projected_eod=$0.19 threshold=$30.00/h floor=$50.00
+2026-05-07T07:05:04.449494+00:00 check today_spend=$7.41 elapsed_h=7.08 pace=$1.05/h projected_eod=$25.09 threshold=$30.00/h floor=$50.00
+2026-05-07T08:05:02.986318+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-07T09:05:04.174755+00:00 check today_spend=$45.12 elapsed_h=9.08 pace=$4.97/h projected_eod=$119.19 threshold=$30.00/h floor=$50.00
+2026-05-07T10:05:03.973219+00:00 check today_spend=$45.12 elapsed_h=10.08 pace=$4.47/h projected_eod=$107.37 threshold=$30.00/h floor=$50.00
+2026-05-07T11:05:04.462416+00:00 check today_spend=$45.12 elapsed_h=11.08 pace=$4.07/h projected_eod=$97.68 threshold=$30.00/h floor=$50.00
+2026-05-07T12:05:04.214904+00:00 check today_spend=$46.62 elapsed_h=12.08 pace=$3.86/h projected_eod=$92.59 threshold=$30.00/h floor=$50.00
+2026-05-07T13:05:04.863192+00:00 check today_spend=$48.14 elapsed_h=13.08 pace=$3.68/h projected_eod=$88.30 threshold=$30.00/h floor=$50.00
+2026-05-07T14:05:05.547228+00:00 check today_spend=$48.14 elapsed_h=14.08 pace=$3.42/h projected_eod=$82.03 threshold=$30.00/h floor=$50.00
+2026-05-07T15:05:06.975139+00:00 check today_spend=$49.53 elapsed_h=15.09 pace=$3.28/h projected_eod=$78.81 threshold=$30.00/h floor=$50.00
+2026-05-07T16:05:04.592593+00:00 check today_spend=$49.53 elapsed_h=16.08 pace=$3.08/h projected_eod=$73.91 threshold=$30.00/h floor=$50.00
+2026-05-07T17:05:05.372778+00:00 check today_spend=$74.31 elapsed_h=17.08 pace=$4.35/h projected_eod=$104.38 threshold=$30.00/h floor=$50.00
+2026-05-07T18:02:42.030393+00:00 check today_spend=$74.31 elapsed_h=18.05 pace=$4.12/h projected_eod=$98.83 threshold=$30.00/h floor=$50.00
+2026-05-07T18:05:02.357843+00:00 check today_spend=$74.31 elapsed_h=18.08 pace=$4.11/h projected_eod=$98.62 threshold=$30.00/h floor=$50.00
+2026-05-07T19:05:05.129389+00:00 check today_spend=$102.23 elapsed_h=19.08 pace=$5.36/h projected_eod=$128.56 threshold=$30.00/h floor=$50.00
+2026-05-07T20:05:04.568758+00:00 check today_spend=$102.23 elapsed_h=20.08 pace=$5.09/h projected_eod=$122.16 threshold=$30.00/h floor=$50.00
+2026-05-07T21:05:04.584808+00:00 check today_spend=$103.74 elapsed_h=21.08 pace=$4.92/h projected_eod=$118.09 threshold=$30.00/h floor=$50.00
+2026-05-07T22:05:07.392010+00:00 check today_spend=$103.74 elapsed_h=22.09 pace=$4.70/h projected_eod=$112.74 threshold=$30.00/h floor=$50.00
+2026-05-07T23:05:04.293902+00:00 check today_spend=$105.17 elapsed_h=23.08 pace=$4.56/h projected_eod=$109.34 threshold=$30.00/h floor=$50.00
+2026-05-08T00:05:05.138731+00:00 check today_spend=$0.00 elapsed_h=0.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-08T01:05:04.344686+00:00 check today_spend=$0.00 elapsed_h=1.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-08T02:05:04.413815+00:00 check today_spend=$0.00 elapsed_h=2.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-08T03:05:02.517738+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-08T04:05:03.785580+00:00 check today_spend=$0.00 elapsed_h=4.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-08T05:05:03.756889+00:00 check today_spend=$0.00 elapsed_h=5.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-08T06:05:04.997404+00:00 check today_spend=$0.00 elapsed_h=6.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-08T07:05:04.319001+00:00 check today_spend=$0.00 elapsed_h=7.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-08T08:05:05.006019+00:00 check today_spend=$1.29 elapsed_h=8.08 pace=$0.16/h projected_eod=$3.82 threshold=$30.00/h floor=$50.00
+2026-05-08T09:05:03.980668+00:00 check today_spend=$2.42 elapsed_h=9.08 pace=$0.27/h projected_eod=$6.38 threshold=$30.00/h floor=$50.00
+2026-05-08T10:05:06.077940+00:00 check today_spend=$2.42 elapsed_h=10.09 pace=$0.24/h projected_eod=$5.75 threshold=$30.00/h floor=$50.00
+2026-05-08T11:05:04.823976+00:00 check today_spend=$4.69 elapsed_h=11.08 pace=$0.42/h projected_eod=$10.16 threshold=$30.00/h floor=$50.00
+2026-05-08T12:05:03.419516+00:00 check today_spend=$4.69 elapsed_h=12.08 pace=$0.39/h projected_eod=$9.32 threshold=$30.00/h floor=$50.00
+2026-05-08T13:05:03.050422+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-08T14:05:03.433927+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-08T15:05:04.438986+00:00 check today_spend=$7.61 elapsed_h=15.08 pace=$0.50/h projected_eod=$12.10 threshold=$30.00/h floor=$50.00
+2026-05-08T16:05:04.712563+00:00 check today_spend=$7.61 elapsed_h=16.08 pace=$0.47/h projected_eod=$11.35 threshold=$30.00/h floor=$50.00
+2026-05-08T17:05:04.276238+00:00 check today_spend=$9.16 elapsed_h=17.08 pace=$0.54/h projected_eod=$12.87 threshold=$30.00/h floor=$50.00
+2026-05-08T18:05:04.793531+00:00 check today_spend=$9.16 elapsed_h=18.08 pace=$0.51/h projected_eod=$12.16 threshold=$30.00/h floor=$50.00
+2026-05-08T19:05:05.496759+00:00 check today_spend=$13.25 elapsed_h=19.08 pace=$0.69/h projected_eod=$16.66 threshold=$30.00/h floor=$50.00
+2026-05-08T20:05:04.886778+00:00 check today_spend=$13.25 elapsed_h=20.08 pace=$0.66/h projected_eod=$15.83 threshold=$30.00/h floor=$50.00
+2026-05-08T21:05:04.304803+00:00 check today_spend=$21.25 elapsed_h=21.08 pace=$1.01/h projected_eod=$24.19 threshold=$30.00/h floor=$50.00
+2026-05-08T22:05:04.973491+00:00 check today_spend=$21.25 elapsed_h=22.08 pace=$0.96/h projected_eod=$23.09 threshold=$30.00/h floor=$50.00
+2026-05-08T23:05:04.455833+00:00 check today_spend=$22.66 elapsed_h=23.08 pace=$0.98/h projected_eod=$23.55 threshold=$30.00/h floor=$50.00
+2026-05-09T00:05:02.779860+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-09T01:05:04.491812+00:00 check today_spend=$0.00 elapsed_h=1.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-09T02:05:03.646896+00:00 check today_spend=$0.00 elapsed_h=2.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-09T03:05:02.114537+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-09T04:05:04.381167+00:00 check today_spend=$0.00 elapsed_h=4.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-09T05:05:04.870454+00:00 check today_spend=$0.04 elapsed_h=5.08 pace=$0.01/h projected_eod=$0.17 threshold=$30.00/h floor=$50.00
+2026-05-09T06:05:05.080598+00:00 check today_spend=$0.04 elapsed_h=6.08 pace=$0.01/h projected_eod=$0.14 threshold=$30.00/h floor=$50.00
+2026-05-09T07:05:05.097735+00:00 check today_spend=$0.98 elapsed_h=7.08 pace=$0.14/h projected_eod=$3.31 threshold=$30.00/h floor=$50.00
+2026-05-09T08:05:04.269034+00:00 check today_spend=$0.98 elapsed_h=8.08 pace=$0.12/h projected_eod=$2.90 threshold=$30.00/h floor=$50.00
+2026-05-09T09:05:04.312271+00:00 check today_spend=$0.98 elapsed_h=9.08 pace=$0.11/h projected_eod=$2.58 threshold=$30.00/h floor=$50.00
+2026-05-09T10:05:04.177456+00:00 check today_spend=$6.45 elapsed_h=10.08 pace=$0.64/h projected_eod=$15.34 threshold=$30.00/h floor=$50.00
+2026-05-09T11:05:04.306356+00:00 check today_spend=$6.45 elapsed_h=11.08 pace=$0.58/h projected_eod=$13.96 threshold=$30.00/h floor=$50.00
+2026-05-09T12:05:02.914266+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-09T13:05:05.128434+00:00 check today_spend=$12.15 elapsed_h=13.08 pace=$0.93/h projected_eod=$22.28 threshold=$30.00/h floor=$50.00
+2026-05-09T14:05:04.605249+00:00 check today_spend=$12.15 elapsed_h=14.08 pace=$0.86/h projected_eod=$20.70 threshold=$30.00/h floor=$50.00
+2026-05-09T15:05:03.718253+00:00 check today_spend=$13.60 elapsed_h=15.08 pace=$0.90/h projected_eod=$21.64 threshold=$30.00/h floor=$50.00
+2026-05-09T16:05:03.968005+00:00 check today_spend=$13.60 elapsed_h=16.08 pace=$0.85/h projected_eod=$20.30 threshold=$30.00/h floor=$50.00
+2026-05-09T17:05:05.124433+00:00 check today_spend=$14.68 elapsed_h=17.08 pace=$0.86/h projected_eod=$20.63 threshold=$30.00/h floor=$50.00
+2026-05-09T18:05:05.084807+00:00 check today_spend=$14.68 elapsed_h=18.08 pace=$0.81/h projected_eod=$19.49 threshold=$30.00/h floor=$50.00
+2026-05-09T19:05:04.708461+00:00 check today_spend=$32.94 elapsed_h=19.08 pace=$1.73/h projected_eod=$41.42 threshold=$30.00/h floor=$50.00
+2026-05-09T20:05:04.860417+00:00 check today_spend=$32.94 elapsed_h=20.08 pace=$1.64/h projected_eod=$39.36 threshold=$30.00/h floor=$50.00
+2026-05-09T21:05:05.399793+00:00 check today_spend=$45.74 elapsed_h=21.08 pace=$2.17/h projected_eod=$52.06 threshold=$30.00/h floor=$50.00
+2026-05-09T22:05:04.620142+00:00 check today_spend=$45.74 elapsed_h=22.08 pace=$2.07/h projected_eod=$49.70 threshold=$30.00/h floor=$50.00
+2026-05-09T23:05:03.493410+00:00 check today_spend=$47.15 elapsed_h=23.08 pace=$2.04/h projected_eod=$49.02 threshold=$30.00/h floor=$50.00
+2026-05-10T00:05:02.006318+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-10T01:05:04.941811+00:00 check today_spend=$0.00 elapsed_h=1.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-10T02:05:04.856555+00:00 check today_spend=$0.00 elapsed_h=2.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-10T03:05:02.231007+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-10T04:05:03.230574+00:00 check today_spend=$0.00 elapsed_h=4.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-10T05:05:03.703245+00:00 check today_spend=$0.13 elapsed_h=5.08 pace=$0.03/h projected_eod=$0.63 threshold=$30.00/h floor=$50.00
+2026-05-10T06:05:04.829408+00:00 check today_spend=$0.13 elapsed_h=6.08 pace=$0.02/h projected_eod=$0.52 threshold=$30.00/h floor=$50.00
+2026-05-10T07:05:05.043463+00:00 check today_spend=$11.41 elapsed_h=7.08 pace=$1.61/h projected_eod=$38.65 threshold=$30.00/h floor=$50.00
+2026-05-10T08:05:04.685789+00:00 check today_spend=$11.41 elapsed_h=8.08 pace=$1.41/h projected_eod=$33.87 threshold=$30.00/h floor=$50.00
+2026-05-10T09:05:03.417636+00:00 check today_spend=$25.56 elapsed_h=9.08 pace=$2.81/h projected_eod=$67.53 threshold=$30.00/h floor=$50.00
+2026-05-10T10:05:05.221155+00:00 check today_spend=$25.56 elapsed_h=10.08 pace=$2.53/h projected_eod=$60.83 threshold=$30.00/h floor=$50.00
+2026-05-10T11:05:04.522652+00:00 check today_spend=$27.84 elapsed_h=11.08 pace=$2.51/h projected_eod=$60.29 threshold=$30.00/h floor=$50.00
+2026-05-10T12:05:02.634184+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-10T13:05:04.178001+00:00 check today_spend=$29.28 elapsed_h=13.08 pace=$2.24/h projected_eod=$53.70 threshold=$30.00/h floor=$50.00
+2026-05-10T14:05:04.345387+00:00 check today_spend=$29.28 elapsed_h=14.08 pace=$2.08/h projected_eod=$49.89 threshold=$30.00/h floor=$50.00
+2026-05-10T15:05:04.543256+00:00 check today_spend=$31.02 elapsed_h=15.08 pace=$2.06/h projected_eod=$49.36 threshold=$30.00/h floor=$50.00
+2026-05-10T16:05:04.569801+00:00 check today_spend=$31.02 elapsed_h=16.08 pace=$1.93/h projected_eod=$46.29 threshold=$30.00/h floor=$50.00
+2026-05-10T17:05:04.652760+00:00 check today_spend=$66.89 elapsed_h=17.08 pace=$3.92/h projected_eod=$93.97 threshold=$30.00/h floor=$50.00
+2026-05-10T18:05:04.686709+00:00 check today_spend=$66.89 elapsed_h=18.08 pace=$3.70/h projected_eod=$88.77 threshold=$30.00/h floor=$50.00
+2026-05-10T19:05:03.967311+00:00 check today_spend=$68.38 elapsed_h=19.08 pace=$3.58/h projected_eod=$85.99 threshold=$30.00/h floor=$50.00
+2026-05-10T20:05:04.237755+00:00 check today_spend=$68.38 elapsed_h=20.08 pace=$3.40/h projected_eod=$81.71 threshold=$30.00/h floor=$50.00
+2026-05-10T21:05:03.647215+00:00 check today_spend=$79.67 elapsed_h=21.08 pace=$3.78/h projected_eod=$90.68 threshold=$30.00/h floor=$50.00
+2026-05-10T22:05:02.798265+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-10T23:05:04.574929+00:00 check today_spend=$87.73 elapsed_h=23.08 pace=$3.80/h projected_eod=$91.21 threshold=$30.00/h floor=$50.00
+2026-05-11T00:05:03.049603+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-11T01:05:04.320425+00:00 check today_spend=$0.00 elapsed_h=1.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-11T02:05:04.241524+00:00 check today_spend=$0.00 elapsed_h=2.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-11T03:05:05.357345+00:00 check today_spend=$0.00 elapsed_h=3.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-11T04:05:05.191461+00:00 check today_spend=$0.00 elapsed_h=4.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-11T05:05:03.536322+00:00 check today_spend=$0.09 elapsed_h=5.08 pace=$0.02/h projected_eod=$0.45 threshold=$30.00/h floor=$50.00
+2026-05-11T06:05:05.355080+00:00 check today_spend=$0.09 elapsed_h=6.08 pace=$0.02/h projected_eod=$0.37 threshold=$30.00/h floor=$50.00
+2026-05-11T07:05:04.514675+00:00 check today_spend=$3.24 elapsed_h=7.08 pace=$0.46/h projected_eod=$10.99 threshold=$30.00/h floor=$50.00
+2026-05-11T08:05:05.718034+00:00 check today_spend=$3.24 elapsed_h=8.08 pace=$0.40/h projected_eod=$9.63 threshold=$30.00/h floor=$50.00
+2026-05-11T09:05:04.819162+00:00 check today_spend=$4.70 elapsed_h=9.08 pace=$0.52/h projected_eod=$12.42 threshold=$30.00/h floor=$50.00
+2026-05-11T10:05:04.480535+00:00 check today_spend=$4.70 elapsed_h=10.08 pace=$0.47/h projected_eod=$11.19 threshold=$30.00/h floor=$50.00
+2026-05-11T11:05:03.790561+00:00 check today_spend=$4.70 elapsed_h=11.08 pace=$0.42/h projected_eod=$10.18 threshold=$30.00/h floor=$50.00
+2026-05-11T12:05:04.161886+00:00 check today_spend=$6.76 elapsed_h=12.08 pace=$0.56/h projected_eod=$13.42 threshold=$30.00/h floor=$50.00
+2026-05-11T13:05:04.593479+00:00 check today_spend=$6.76 elapsed_h=13.08 pace=$0.52/h projected_eod=$12.39 threshold=$30.00/h floor=$50.00
+2026-05-11T14:05:04.572880+00:00 check today_spend=$8.25 elapsed_h=14.08 pace=$0.59/h projected_eod=$14.06 threshold=$30.00/h floor=$50.00
+2026-05-11T15:05:04.466457+00:00 check today_spend=$9.82 elapsed_h=15.08 pace=$0.65/h projected_eod=$15.62 threshold=$30.00/h floor=$50.00
+2026-05-11T16:05:05.519584+00:00 check today_spend=$9.82 elapsed_h=16.08 pace=$0.61/h projected_eod=$14.65 threshold=$30.00/h floor=$50.00
+2026-05-11T17:05:04.691136+00:00 check today_spend=$11.25 elapsed_h=17.08 pace=$0.66/h projected_eod=$15.80 threshold=$30.00/h floor=$50.00
+2026-05-11T18:05:04.957743+00:00 check today_spend=$11.25 elapsed_h=18.08 pace=$0.62/h projected_eod=$14.93 threshold=$30.00/h floor=$50.00
+2026-05-11T19:05:05.316362+00:00 check today_spend=$12.76 elapsed_h=19.08 pace=$0.67/h projected_eod=$16.05 threshold=$30.00/h floor=$50.00
+2026-05-11T20:05:04.194160+00:00 check today_spend=$12.76 elapsed_h=20.08 pace=$0.64/h projected_eod=$15.25 threshold=$30.00/h floor=$50.00
+2026-05-11T21:05:05.442775+00:00 check today_spend=$14.21 elapsed_h=21.08 pace=$0.67/h projected_eod=$16.17 threshold=$30.00/h floor=$50.00
+2026-05-11T22:05:02.265520+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-11T23:05:05.426282+00:00 check today_spend=$17.58 elapsed_h=23.08 pace=$0.76/h projected_eod=$18.28 threshold=$30.00/h floor=$50.00
+2026-05-12T00:05:03.911413+00:00 check today_spend=$0.00 elapsed_h=0.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-12T01:05:04.717340+00:00 check today_spend=$0.00 elapsed_h=1.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-12T02:05:04.473550+00:00 check today_spend=$0.00 elapsed_h=2.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-12T03:05:04.575444+00:00 check today_spend=$0.00 elapsed_h=3.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-12T04:05:04.675636+00:00 check today_spend=$0.00 elapsed_h=4.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-12T05:05:04.700242+00:00 check today_spend=$0.10 elapsed_h=5.08 pace=$0.02/h projected_eod=$0.47 threshold=$30.00/h floor=$50.00
+2026-05-12T06:05:02.155157+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-12T07:05:04.620436+00:00 check today_spend=$1.01 elapsed_h=7.08 pace=$0.14/h projected_eod=$3.41 threshold=$30.00/h floor=$50.00
+2026-05-12T08:05:03.986495+00:00 check today_spend=$1.01 elapsed_h=8.08 pace=$0.12/h projected_eod=$2.98 threshold=$30.00/h floor=$50.00
+2026-05-12T09:05:04.785262+00:00 check today_spend=$2.71 elapsed_h=9.08 pace=$0.30/h projected_eod=$7.16 threshold=$30.00/h floor=$50.00
+2026-05-12T10:05:05.543807+00:00 check today_spend=$2.71 elapsed_h=10.08 pace=$0.27/h projected_eod=$6.45 threshold=$30.00/h floor=$50.00
+2026-05-12T11:05:08.392806+00:00 check today_spend=$2.71 elapsed_h=11.09 pace=$0.24/h projected_eod=$5.87 threshold=$30.00/h floor=$50.00
+2026-05-12T12:05:06.437777+00:00 check today_spend=$4.63 elapsed_h=12.09 pace=$0.38/h projected_eod=$9.20 threshold=$30.00/h floor=$50.00
+2026-05-12T13:05:06.768887+00:00 check today_spend=$6.11 elapsed_h=13.09 pace=$0.47/h projected_eod=$11.21 threshold=$30.00/h floor=$50.00
+2026-05-12T14:05:02.487271+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-12T15:05:14.254235+00:00 check today_spend=$7.60 elapsed_h=15.09 pace=$0.50/h projected_eod=$12.09 threshold=$30.00/h floor=$50.00
+2026-05-12T16:05:10.848892+00:00 check today_spend=$7.60 elapsed_h=16.09 pace=$0.47/h projected_eod=$11.34 threshold=$30.00/h floor=$50.00
+2026-05-12T17:05:04.602362+00:00 check today_spend=$9.12 elapsed_h=17.08 pace=$0.53/h projected_eod=$12.81 threshold=$30.00/h floor=$50.00
+2026-05-12T18:05:04.902619+00:00 check today_spend=$9.12 elapsed_h=18.08 pace=$0.50/h projected_eod=$12.10 threshold=$30.00/h floor=$50.00
+2026-05-12T19:05:03.645184+00:00 check today_spend=$10.54 elapsed_h=19.08 pace=$0.55/h projected_eod=$13.26 threshold=$30.00/h floor=$50.00
+2026-05-12T20:05:04.207203+00:00 check today_spend=$10.54 elapsed_h=20.08 pace=$0.52/h projected_eod=$12.60 threshold=$30.00/h floor=$50.00
+2026-05-15T16:05:04.924634+00:00 check today_spend=$9.12 elapsed_h=16.08 pace=$0.57/h projected_eod=$13.61 threshold=$30.00/h floor=$50.00
+2026-05-15T17:05:01.678827+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-15T18:05:01.727492+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-15T19:05:02.189883+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-15T20:05:03.973349+00:00 check today_spend=$10.58 elapsed_h=20.08 pace=$0.53/h projected_eod=$12.64 threshold=$30.00/h floor=$50.00
+2026-05-15T21:05:04.837892+00:00 check today_spend=$14.64 elapsed_h=21.08 pace=$0.69/h projected_eod=$16.66 threshold=$30.00/h floor=$50.00
+2026-05-15T22:05:04.655146+00:00 check today_spend=$36.71 elapsed_h=22.08 pace=$1.66/h projected_eod=$39.90 threshold=$30.00/h floor=$50.00
+2026-05-15T23:05:03.732249+00:00 check today_spend=$52.70 elapsed_h=23.08 pace=$2.28/h projected_eod=$54.80 threshold=$30.00/h floor=$50.00
+2026-05-16T00:05:03.806988+00:00 check today_spend=$0.00 elapsed_h=0.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-16T01:05:04.417385+00:00 check today_spend=$0.00 elapsed_h=1.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-16T02:05:04.108864+00:00 check today_spend=$0.00 elapsed_h=2.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-16T03:05:03.799875+00:00 check today_spend=$0.00 elapsed_h=3.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-16T04:05:03.904642+00:00 check today_spend=$0.00 elapsed_h=4.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-16T05:05:04.078659+00:00 check today_spend=$0.00 elapsed_h=5.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-16T06:05:02.663403+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-16T07:05:03.616309+00:00 check today_spend=$0.07 elapsed_h=7.08 pace=$0.01/h projected_eod=$0.23 threshold=$30.00/h floor=$50.00
+2026-05-16T08:05:05.095549+00:00 check today_spend=$0.97 elapsed_h=8.08 pace=$0.12/h projected_eod=$2.87 threshold=$30.00/h floor=$50.00
+2026-05-16T09:05:05.233754+00:00 check today_spend=$2.52 elapsed_h=9.08 pace=$0.28/h projected_eod=$6.66 threshold=$30.00/h floor=$50.00
+2026-05-16T10:05:05.112711+00:00 check today_spend=$2.52 elapsed_h=10.08 pace=$0.25/h projected_eod=$6.00 threshold=$30.00/h floor=$50.00
+2026-05-16T11:05:04.716162+00:00 check today_spend=$2.52 elapsed_h=11.08 pace=$0.23/h projected_eod=$5.46 threshold=$30.00/h floor=$50.00
+2026-05-16T12:05:04.534993+00:00 check today_spend=$4.57 elapsed_h=12.08 pace=$0.38/h projected_eod=$9.08 threshold=$30.00/h floor=$50.00
+2026-05-16T13:05:06.429951+00:00 check today_spend=$6.05 elapsed_h=13.09 pace=$0.46/h projected_eod=$11.11 threshold=$30.00/h floor=$50.00
+2026-05-16T14:05:04.820798+00:00 check today_spend=$6.05 elapsed_h=14.08 pace=$0.43/h projected_eod=$10.32 threshold=$30.00/h floor=$50.00
+2026-05-16T15:05:04.648565+00:00 check today_spend=$7.53 elapsed_h=15.08 pace=$0.50/h projected_eod=$11.98 threshold=$30.00/h floor=$50.00
+2026-05-16T16:05:03.868664+00:00 check today_spend=$7.53 elapsed_h=16.08 pace=$0.47/h projected_eod=$11.24 threshold=$30.00/h floor=$50.00
+2026-05-16T17:05:03.647974+00:00 check today_spend=$12.12 elapsed_h=17.08 pace=$0.71/h projected_eod=$17.03 threshold=$30.00/h floor=$50.00
+2026-05-16T18:05:01.657419+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-16T19:05:03.778182+00:00 check today_spend=$13.41 elapsed_h=19.08 pace=$0.70/h projected_eod=$16.87 threshold=$30.00/h floor=$50.00
+2026-05-16T20:05:05.094607+00:00 check today_spend=$13.41 elapsed_h=20.08 pace=$0.67/h projected_eod=$16.03 threshold=$30.00/h floor=$50.00
+2026-05-16T21:05:03.624762+00:00 check today_spend=$16.43 elapsed_h=21.08 pace=$0.78/h projected_eod=$18.71 threshold=$30.00/h floor=$50.00
+2026-05-16T22:05:03.666230+00:00 check today_spend=$16.43 elapsed_h=22.08 pace=$0.74/h projected_eod=$17.86 threshold=$30.00/h floor=$50.00
+2026-05-16T23:05:03.639556+00:00 check today_spend=$17.96 elapsed_h=23.08 pace=$0.78/h projected_eod=$18.68 threshold=$30.00/h floor=$50.00
+2026-05-17T00:05:04.295900+00:00 check today_spend=$0.00 elapsed_h=0.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-17T01:05:04.158414+00:00 check today_spend=$0.00 elapsed_h=1.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-17T02:05:03.619772+00:00 check today_spend=$0.00 elapsed_h=2.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-17T03:05:04.597775+00:00 check today_spend=$0.00 elapsed_h=3.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-17T04:05:03.656215+00:00 check today_spend=$0.00 elapsed_h=4.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-17T05:05:04.350518+00:00 check today_spend=$0.13 elapsed_h=5.08 pace=$0.03/h projected_eod=$0.63 threshold=$30.00/h floor=$50.00
+2026-05-17T06:05:02.402984+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-17T07:05:05.058576+00:00 check today_spend=$0.13 elapsed_h=7.08 pace=$0.02/h projected_eod=$0.45 threshold=$30.00/h floor=$50.00
+2026-05-17T08:05:02.509983+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-17T09:05:05.098671+00:00 check today_spend=$2.46 elapsed_h=9.08 pace=$0.27/h projected_eod=$6.49 threshold=$30.00/h floor=$50.00
+2026-05-17T10:05:02.997323+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-17T11:05:04.000301+00:00 check today_spend=$2.46 elapsed_h=11.08 pace=$0.22/h projected_eod=$5.32 threshold=$30.00/h floor=$50.00
+2026-05-17T12:05:05.618619+00:00 check today_spend=$4.07 elapsed_h=12.08 pace=$0.34/h projected_eod=$8.08 threshold=$30.00/h floor=$50.00
+2026-05-17T13:05:05.225298+00:00 check today_spend=$5.47 elapsed_h=13.08 pace=$0.42/h projected_eod=$10.02 threshold=$30.00/h floor=$50.00
+2026-05-17T14:05:15.943722+00:00 check today_spend=$5.47 elapsed_h=14.09 pace=$0.39/h projected_eod=$9.31 threshold=$30.00/h floor=$50.00
+2026-05-17T15:05:04.078910+00:00 check today_spend=$10.09 elapsed_h=15.08 pace=$0.67/h projected_eod=$16.06 threshold=$30.00/h floor=$50.00
+2026-05-17T16:05:04.615751+00:00 check today_spend=$10.09 elapsed_h=16.08 pace=$0.63/h projected_eod=$15.06 threshold=$30.00/h floor=$50.00
+2026-05-17T17:05:05.727631+00:00 check today_spend=$11.71 elapsed_h=17.08 pace=$0.69/h projected_eod=$16.44 threshold=$30.00/h floor=$50.00
+2026-05-17T18:05:01.921014+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-17T19:05:03.685515+00:00 check today_spend=$12.47 elapsed_h=19.08 pace=$0.65/h projected_eod=$15.68 threshold=$30.00/h floor=$50.00
+2026-05-17T20:05:04.759998+00:00 check today_spend=$12.47 elapsed_h=20.08 pace=$0.62/h projected_eod=$14.90 threshold=$30.00/h floor=$50.00
+2026-05-17T21:05:04.427299+00:00 check today_spend=$26.48 elapsed_h=21.08 pace=$1.26/h projected_eod=$30.14 threshold=$30.00/h floor=$50.00
+2026-05-17T22:05:05.665842+00:00 check today_spend=$26.48 elapsed_h=22.08 pace=$1.20/h projected_eod=$28.77 threshold=$30.00/h floor=$50.00
+2026-05-17T23:05:04.647493+00:00 check today_spend=$27.23 elapsed_h=23.08 pace=$1.18/h projected_eod=$28.31 threshold=$30.00/h floor=$50.00
+2026-05-18T00:05:04.221013+00:00 check today_spend=$0.00 elapsed_h=0.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-18T01:05:04.646128+00:00 check today_spend=$0.00 elapsed_h=1.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-18T02:05:04.001186+00:00 check today_spend=$0.00 elapsed_h=2.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-18T03:05:04.503941+00:00 check today_spend=$0.00 elapsed_h=3.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-18T04:05:04.387574+00:00 check today_spend=$0.00 elapsed_h=4.08 pace=$0.00/h projected_eod=$0.00 threshold=$30.00/h floor=$50.00
+2026-05-18T05:05:05.218603+00:00 check today_spend=$0.10 elapsed_h=5.08 pace=$0.02/h projected_eod=$0.48 threshold=$30.00/h floor=$50.00
+2026-05-18T06:05:05.291521+00:00 check today_spend=$0.10 elapsed_h=6.08 pace=$0.02/h projected_eod=$0.40 threshold=$30.00/h floor=$50.00
+2026-05-18T07:05:02.389585+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-18T08:05:03.283753+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-18T09:05:06.021812+00:00 check today_spend=$2.45 elapsed_h=9.09 pace=$0.27/h projected_eod=$6.47 threshold=$30.00/h floor=$50.00
+2026-05-18T10:05:02.824466+00:00 cost query FAILED HTTPError: HTTP Error 429: Too Many Requests
+2026-05-18T11:05:04.294193+00:00 check today_spend=$2.45 elapsed_h=11.08 pace=$0.22/h projected_eod=$5.30 threshold=$30.00/h floor=$50.00
+2026-05-18T12:05:04.575630+00:00 check today_spend=$3.98 elapsed_h=12.08 pace=$0.33/h projected_eod=$7.90 threshold=$30.00/h floor=$50.00
+2026-05-18T13:05:04.562581+00:00 check today_spend=$5.45 elapsed_h=13.08 pace=$0.42/h projected_eod=$9.99 threshold=$30.00/h floor=$50.00
+2026-05-18T14:05:03.826373+00:00 check today_spend=$5.45 elapsed_h=14.08 pace=$0.39/h projected_eod=$9.28 threshold=$30.00/h floor=$50.00
+2026-05-18T15:05:03.802185+00:00 check today_spend=$6.95 elapsed_h=15.08 pace=$0.46/h projected_eod=$11.05 threshold=$30.00/h floor=$50.00

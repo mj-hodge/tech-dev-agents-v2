@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily SDK cost collection and summary (STORY-022)
+After=network.target
+
+[Service]
+Type=oneshot
+User=hermes
+ExecStart=/usr/bin/python3 /opt/agent/cost_collector.py --log-dir /tmp/claude-sdlc-logs --output /tmp/claude-sdlc-logs/cost-summary.log
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cost-collector

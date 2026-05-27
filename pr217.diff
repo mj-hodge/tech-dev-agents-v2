@@ -1,0 +1,317 @@
+diff --git a/.project b/.project
+index edb6eabe..408853e6 100644
+--- a/.project
++++ b/.project
+@@ -48,6 +48,7 @@
+ | STORY-739 | queue | medium | 1 | phase 1 complete — seed.md written. Dashboard Foundation + Agentic Tier — New Tab + Homepage Metrics: new "Agentic" tab in DashboardLayout (active runs, today's completed, avg duration, today's cost, run-level table); homepage "Foundation Tier" card (today's tokens by Opus/Sonnet/Haiku + cost + 7d sparkline); backend `GET /api/fleet/foundation-usage` + `GET /api/fleet/agentic-runs`; cost_service split for Foundation vs Agentic; SC-7 sources Foundation cost from Azure AI metering (not Loki SDK estimate); SC-8 graceful "data unavailable" state. 8 SCs. | story-739/dashboard-agentic-foundation-tier |
+ | STORY-736 | devon | small | 8 | phase 8 complete — 16/16 tests GREEN (8 backend + 8 frontend). cost_service populates foundry_cost_status (ok/unavailable/no_usage); AgentCard renders —/stale/warning conditionally; FoundryCostPanel shows unavailable message on all-zero data. 4 commits. | story-736/story-736 |
+ | STORY-740 | queue | small | 1 | seed complete — dispatching | — |
++| STORY-742 | daisy | small | 8 | phase 8 complete — 10/10 tests GREEN, PR pending | story-742/dashboard-foundry-cost-source-fix |
+ 
+ > **On phase completion:** Move current phase to Completed Phases, set Next Phase as Current Phase, set Current Status to `in_progress`. When user says "continue", "next step", or `/next` after `/clear`, read this section to determine what to do.
+ 
+diff --git a/deployment/ops-console/scripts/refresh_foundry_cost.py b/deployment/ops-console/scripts/refresh_foundry_cost.py
+index 1411597d..30080432 100644
+--- a/deployment/ops-console/scripts/refresh_foundry_cost.py
++++ b/deployment/ops-console/scripts/refresh_foundry_cost.py
+@@ -81,6 +81,18 @@ async def _query_cost_management(
+             "granularity": "Daily",
+             "aggregation": {"totalCost": {"name": "Cost", "function": "Sum"}},
+             "grouping": [{"type": "Dimension", "name": "ResourceId"}],
++            # STORY-742: Filter to AI Foundry resources only.  Without this,
++            # every Azure resource (VMs, storage, disks, networking) lands in
++            # the "other" bucket and inflates the dashboard's Foundry cost panel.
++            "filter": {
++                "dimensions": {
++                    "name": "ResourceType",
++                    "operator": "In",
++                    "values": [
++                        "microsoft.machinelearningservices/workspaces",
++                    ],
++                },
++            },
+         },
+     }
+     headers = {
+diff --git a/features/story-742-dashboard-foundry-cost-source-fix/seed.md b/features/story-742-dashboard-foundry-cost-source-fix/seed.md
+new file mode 100644
+index 00000000..a78df9d1
+--- /dev/null
++++ b/features/story-742-dashboard-foundry-cost-source-fix/seed.md
+@@ -0,0 +1,52 @@
++# STORY-742: Dashboard Foundry Cost Source Fix
++
++## Problem
++
++The fleet-wide Foundry cost panel (`/api/fleet/foundry-cost`) displays inflated
++totals because the `refresh_foundry_cost.py` cron script queries **all** Azure
++subscription costs grouped by `ResourceId` without filtering for AI Foundry
++resources.  Non-Foundry costs (VMs, storage, networking, disks, etc.) are
++classified into the `"other"` bucket by `classify_resource_id()`, making the
++chart unreliable for operators monitoring model inference spend.
++
++### Root Cause
++
++`_query_cost_management()` in `deployment/ops-console/scripts/refresh_foundry_cost.py`
++sends a Cost Management query with:
++- `grouping: [{"type": "Dimension", "name": "ResourceId"}]`
++- **No filter** on resource type or provider namespace
++
++Every Azure resource in the subscription is returned.  The classifier only
++recognises `claude-opus-*`, `claude-sonnet-*`, `claude-haiku-*` patterns —
++everything else falls through to `"other"`.
++
++### Contrast with Per-Agent Path (Working Correctly)
++
++The per-agent cost path in `azure_cost_client.py` groups by `ResourceGroup` and
++filters through `agent_map`, so only mapped resource groups contribute to agent
++cost.  The fleet-wide cron path has no equivalent filter.
++
++## Scope: Small
++
++Single-file fix + test.  No schema migration.  No frontend change required
++(the `"other"` bucket already exists in the UI — it will simply shrink to
++reflect actual unclassified Foundry models rather than all Azure infra costs).
++
++## Acceptance Criteria
++
++1. The Cost Management query in `refresh_foundry_cost.py` includes a filter that
++   restricts results to AI Foundry resources only
++   (`Microsoft.MachineLearningServices` provider namespace).
++2. The `"other"` bucket contains only unrecognised AI model deployments, not VMs
++   or storage.
++3. `classify_resource_id()` behaviour is unchanged (no regression to model
++   classification).
++4. Existing unit tests pass; new test covers the filter presence in the query
++   body.
++
++## Files to Modify
++
++| File | Change |
++|------|--------|
++| `deployment/ops-console/scripts/refresh_foundry_cost.py` | Add `filter` clause to Cost Management query body |
++| `tests/deployment/test_refresh_foundry_cost.py` (new) | Verify query filter + aggregation with mixed resource types |
+diff --git a/features/story-742-dashboard-foundry-cost-source-fix/test-design.md b/features/story-742-dashboard-foundry-cost-source-fix/test-design.md
+new file mode 100644
+index 00000000..dd376e8c
+--- /dev/null
++++ b/features/story-742-dashboard-foundry-cost-source-fix/test-design.md
+@@ -0,0 +1,49 @@
++# STORY-742: Test Design — Dashboard Foundry Cost Source Fix
++
++## Test Strategy
++
++Unit tests only (no integration/E2E).  The fix is a filter clause added to the
++Cost Management query body and validation that non-Foundry rows are excluded.
++
++## Test File
++
++`tests/deployment/test_refresh_foundry_cost.py`
++
++## Test Cases
++
++### TC-1: Query body includes resource-type filter
++
++**Given** the `_query_cost_management` function builds a Cost Management request
++**When** the request body is constructed
++**Then** `body["dataset"]["filter"]` contains a dimension filter for
++`ResourceType` equal to `microsoft.machinelearningservices/workspaces` (or the
++appropriate provider namespace that covers AI Foundry deployments).
++
++### TC-2: Aggregation excludes non-Foundry rows
++
++**Given** raw Cost Management rows containing a mix of:
++- AI Foundry deployments (`claude-opus-*`, `claude-sonnet-*`)
++- VM resources (`Microsoft.Compute/virtualMachines/...`)
++- Storage resources (`Microsoft.Storage/storageAccounts/...`)
++
++**When** `_aggregate_by_date(rows)` is called
++**Then** only the AI Foundry rows contribute to the output; VM and storage rows
++are included in `"other"` (this is existing behaviour — unchanged by the fix,
++since the filter operates at the API level, not in `_aggregate_by_date`).
++
++### TC-3: classify_resource_id regression guard
++
++**Given** known ResourceId strings for opus, sonnet, haiku, and unknown models
++**When** `classify_resource_id()` is called
++**Then** the output matches expected bucket assignments (no regression).
++
++### TC-4: Aggregation handles empty rows after filter
++
++**Given** an empty list of rows (filter returned nothing)
++**When** `_aggregate_by_date([])` is called
++**Then** an empty list is returned with no errors.
++
++## Out of Scope
++
++- Integration test against live Azure Cost Management API (cost + auth concerns)
++- Frontend rendering tests (no frontend change in this story)
+diff --git a/tests/deployment/test_refresh_foundry_cost_742.py b/tests/deployment/test_refresh_foundry_cost_742.py
+new file mode 100644
+index 00000000..9dd85d45
+--- /dev/null
++++ b/tests/deployment/test_refresh_foundry_cost_742.py
+@@ -0,0 +1,163 @@
++"""STORY-742: Verify refresh_foundry_cost query filters for AI Foundry resources only.
++
++The cron script must include a ResourceType dimension filter so that non-Foundry
++costs (VMs, storage, networking) are excluded at the API level and don't inflate
++the "other" bucket on the dashboard.
++"""
++
++from __future__ import annotations
++
++import importlib
++import json
++import types
++from datetime import date
++from unittest.mock import AsyncMock, MagicMock, patch
++
++import pytest
++
++
++# ---------------------------------------------------------------------------
++# Helpers — import the cron script as a module
++# ---------------------------------------------------------------------------
++
++def _load_refresh_module():
++    """Import refresh_foundry_cost.py as a module for testing."""
++    import importlib.util
++    import os
++
++    script_path = os.path.join(
++        os.path.dirname(__file__),
++        "..",
++        "..",
++        "deployment",
++        "ops-console",
++        "scripts",
++        "refresh_foundry_cost.py",
++    )
++    script_path = os.path.normpath(script_path)
++    spec = importlib.util.spec_from_file_location("refresh_foundry_cost", script_path)
++    mod = importlib.util.module_from_spec(spec)
++    spec.loader.exec_module(mod)
++    return mod
++
++
++@pytest.fixture()
++def refresh_mod():
++    return _load_refresh_module()
++
++
++# ---------------------------------------------------------------------------
++# TC-1: Query body includes resource-type filter
++# ---------------------------------------------------------------------------
++
++
++class TestQueryFilter:
++    """Verify the Cost Management query body includes a Foundry resource filter."""
++
++    @pytest.mark.asyncio
++    async def test_query_body_contains_resource_type_filter(self, refresh_mod):
++        """The query body must filter on a ResourceType dimension to restrict
++        results to AI Foundry resources (Microsoft.MachineLearningServices)."""
++
++        captured_body = {}
++
++        async def _mock_post(url, json=None, headers=None, timeout=None):
++            captured_body.update(json or {})
++            resp = MagicMock()
++            resp.status_code = 200
++            resp.json.return_value = {"properties": {"rows": []}}
++            return resp
++
++        mock_client = AsyncMock()
++        mock_client.post = _mock_post
++
++        await refresh_mod._query_cost_management(
++            mock_client, "fake-token", "fake-sub", "2026-04-21", "2026-04-28"
++        )
++
++        # The body must have a filter clause
++        dataset = captured_body.get("dataset", {})
++        assert "filter" in dataset, (
++            "Cost Management query body must include a 'filter' in the dataset "
++            "to restrict results to AI Foundry resources"
++        )
++
++        # Verify the filter targets the right dimension
++        filter_clause = dataset["filter"]
++        filter_json = json.dumps(filter_clause).lower()
++        assert "resourcetype" in filter_json or "resource type" in filter_json, (
++            "Filter must reference the ResourceType dimension"
++        )
++        assert "machinelearningservices" in filter_json, (
++            "Filter must include Microsoft.MachineLearningServices provider"
++        )
++
++
++# ---------------------------------------------------------------------------
++# TC-2: Aggregation with mixed resource types
++# ---------------------------------------------------------------------------
++
++
++class TestAggregation:
++    """Verify _aggregate_by_date handles rows correctly."""
++
++    def test_aggregation_with_foundry_rows(self, refresh_mod):
++        """Foundry deployment ResourceIds are classified into correct buckets."""
++        rows = [
++            [10.50, 20260425, "/subscriptions/s/resourceGroups/rg/providers/Microsoft.MachineLearningServices/workspaces/ws/deployments/claude-opus-4-6"],
++            [5.25, 20260425, "/subscriptions/s/resourceGroups/rg/providers/Microsoft.MachineLearningServices/workspaces/ws/deployments/claude-sonnet-4-5"],
++            [2.10, 20260425, "/subscriptions/s/resourceGroups/rg/providers/Microsoft.MachineLearningServices/workspaces/ws/deployments/claude-haiku-3-5"],
++        ]
++
++        result = refresh_mod._aggregate_by_date(rows)
++        assert len(result) == 1
++
++        day = result[0]
++        assert day["usage_date"] == date(2026, 4, 25)
++        assert day["opus_usd"] == 10.50
++        assert day["sonnet_usd"] == 5.25
++        assert day["haiku_usd"] == 2.10
++        assert day["other_usd"] == 0.0
++
++    def test_aggregation_empty_rows(self, refresh_mod):
++        """Empty input returns empty output with no errors."""
++        result = refresh_mod._aggregate_by_date([])
++        assert result == []
++
++    def test_aggregation_unknown_model_goes_to_other(self, refresh_mod):
++        """ResourceIds that don't match known models go to 'other'."""
++        rows = [
++            [3.00, 20260425, "/subscriptions/s/resourceGroups/rg/providers/Microsoft.MachineLearningServices/workspaces/ws/deployments/gpt-4o-mini"],
++        ]
++
++        result = refresh_mod._aggregate_by_date(rows)
++        assert len(result) == 1
++        assert result[0]["other_usd"] == 3.00
++        assert result[0]["opus_usd"] == 0.0
++
++
++# ---------------------------------------------------------------------------
++# TC-3: classify_resource_id regression guard
++# ---------------------------------------------------------------------------
++
++
++class TestClassifyResourceId:
++    """Regression guard for classify_resource_id()."""
++
++    @pytest.mark.parametrize(
++        "resource_id, expected",
++        [
++            ("/deployments/claude-opus-4-6-20260301", "opus"),
++            ("/deployments/claude-sonnet-4-5-20260301", "sonnet"),
++            ("/deployments/claude-haiku-3-5-20260301", "haiku"),
++            ("/deployments/gpt-4o-mini", "other"),
++            ("/providers/Microsoft.Compute/virtualMachines/agent-vm", "other"),
++            ("", "other"),
++        ],
++    )
++    def test_classification(self, refresh_mod, resource_id, expected):
++        from tech_dev_agents.ops_console.services.foundry_cost_service import (
++            classify_resource_id,
++        )
++
++        assert classify_resource_id(resource_id) == expected

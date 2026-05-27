@@ -1,0 +1,43 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# IDE
+.vscode
+.idea
+
+# Docs and specs
+features/
+.sdlc/
+docs/
+*.md
+!requirements.txt
+
+# Tests (not needed in production image)
+tests/
+
+# CI
+.github/
+
+# Environment files (secrets)
+.env
+*.env
+
+# Deployment configs (not needed inside container — except agent registry)
+deployment/
+!deployment/vm/agent-registry.json
+
+# Misc
+.project
+backlog.md
+development-tasks.md
+AGENTS.md
+CLAUDE.md

@@ -1,0 +1,132 @@
+# retro-proposal.yaml
+version: 1
+project: tech-dev-agents
+epic: "Agent Fleet Operations 2026-04-02 to 2026-04-06 (no formal epic)"
+date: 2026-04-07
+metrics:
+  stories: 3
+  tests: 441
+  fix_loops: 0
+  soul_iterations: 7
+  agent_incidents: 4
+  incidents_resolved_same_day: 4
+  skills_created: 5
+  config_changes: 6
+
+proposals:
+  - id: F-001
+    finding: "Agent SOUL.md has no validation — 7 iterations in 5 days with behavior regressions when sections conflicted"
+    category: "Operations"
+    severity: High
+    target_file: null
+    action: "Add SOUL.md linting for required sections (Cost Discipline, Story Assignment, SDK Mandate, Token Exhaustion, Handback)"
+    proposed_text: null
+    evidence:
+      occurrences: 7
+      stories: ["All agent work"]
+
+  - id: F-002
+    finding: "Config pushes without restarts led to stale behavior — agents ran with old SOUL.md and broken terminal guard"
+    category: "Operations"
+    severity: High
+    target_file: null
+    action: "agent-push.sh should always restart after config changes by default"
+    proposed_text: null
+    evidence:
+      occurrences: 4
+      stories: ["Dan terminal guard", "Derrick SDK auth", "SOUL.md updates"]
+
+  - id: F-003
+    finding: "Claude Code OAuth expired 3 times in one day — each required manual SSH to re-auth"
+    category: "Operations"
+    severity: High
+    target_file: null
+    action: "Hourly auth check cron on agent VMs that alerts Mark if token is expired"
+    proposed_text: null
+    evidence:
+      occurrences: 3
+      stories: ["Derrick STORY-019", "Derrick STORY-089"]
+
+  - id: F-004
+    finding: "Dispatch skill assumes current repo — Mark dispatched STORY-087 (advertising-amazon) from tech-dev-agents"
+    category: "Skill"
+    severity: Medium
+    target_file: null
+    action: "Add --repo flag to dispatch skill for cross-project dispatch"
+    proposed_text: null
+    evidence:
+      occurrences: 1
+      stories: ["STORY-087"]
+
+  - id: F-006
+    finding: "Agents respond to ALL messages in group chats — no @mention filtering for Teams"
+    category: "Hermes"
+    severity: Medium
+    target_file: null
+    action: "Create Hermes skill that filters group messages — only respond when bot name appears in message"
+    proposed_text: null
+    evidence:
+      occurrences: 1
+      stories: ["Group chat setup"]
+
+  - id: F-007
+    finding: "Duplicate terminal timeout in hermes-config.yaml — 600 and 300, YAML last-wins means 300 is active"
+    category: "Bug"
+    severity: High
+    target_file: null
+    action: "Remove duplicate timeout: 300 line"
+    proposed_text: null
+    evidence:
+      occurrences: 1
+      stories: ["Background process handling"]
+
+  - id: F-008
+    finding: "Agent registry format mismatch between ops_console code and deployment files caused crashes"
+    category: "Phase 6"
+    severity: Medium
+    target_file: "agents/phase-6-design.md"
+    action: "For multi-component deployments, Phase 6 should include interface schema definitions for shared config files"
+    proposed_text: |
+      ## Shared Config Schema (REQUIRED for multi-component projects)
+      When multiple components consume the same config file (e.g., agent-registry.json):
+      - Define a JSON schema in the design doc
+      - Both producer and consumer must validate against it
+      - Schema changes require updating all consumers
+    evidence:
+      occurrences: 2
+      stories: ["STORY-018", "Ops console deploy"]
+
+  - id: F-009
+    finding: "Agents using claude CLI directly instead of SDK wrapper — cost tracking lost"
+    category: "Phase 8"
+    severity: Medium
+    target_file: "agents/phase-8-implementation.md"
+    action: "Mandate SDK wrapper for all Claude Code invocations in agent-managed projects"
+    proposed_text: |
+      ## Agent SDK Enforcement (for agent-managed projects)
+      When agents execute Claude Code, they MUST use the SDK wrapper (claude_sdk_tool.py)
+      rather than the bare `claude` CLI. The wrapper provides:
+      - Cost tracking ([DONE] cost=$X logged to Grafana)
+      - Approval logging ([APPROVED]/[DENIED] markers)
+      - Session management (resume capability)
+      Without the wrapper, costs are invisible and approval audit trail is lost.
+    evidence:
+      occurrences: 2
+      stories: ["Derrick STORY-090", "Dan STORY-088"]
+
+  - id: F-010
+    finding: "Pre-deploy gate doesn't verify agent configuration (SOUL.md, config.yaml, skills, terminal guard)"
+    category: "Phase 11"
+    severity: Medium
+    target_file: "agents/phase-11-predeploy.md"
+    action: "Add agent configuration verification to pre-deploy gate for agent infrastructure stories"
+    proposed_text: |
+      ## Check: Agent Configuration (for agent infrastructure stories)
+      - [ ] SOUL.md contains required sections (Cost Discipline, Story Assignment, SDK Mandate, Token Exhaustion, Handback)
+      - [ ] hermes-config.yaml has no duplicate keys
+      - [ ] Terminal guard imports successfully (python3 -c 'from terminal_guard import check_command')
+      - [ ] All Hermes skills referenced in SOUL.md exist on the VM
+      - [ ] Claude Code auth is valid (claude auth status returns loggedIn: true)
+    evidence:
+      occurrences: 2
+      stories: ["STORY-018", "Terminal guard bug"]

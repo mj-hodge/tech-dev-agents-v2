@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "agent-ops": {
+      "command": "/home/markoreta/.nvm/versions/node/v22.22.1/bin/node",
+      "args": ["/mnt/c/Projects/tech-dev-agents/tools/agent-ops-mcp/dist/index.js"],
+      "env": {
+        "OPS_CONSOLE_URL": "https://tech-dev-agents.gorillacommerce.ai",
+        "OPS_API_KEY": "44b5bd7a81adca979e8bf071eb57c414b3f79b1945b1d94e41ec3f12868e95a6",
+        "AGENT_REGISTRY_PATH": "/mnt/c/Projects/tech-dev-agents/deployment/vm/agent-registry.json"
+      }
+    }
+  }
+}

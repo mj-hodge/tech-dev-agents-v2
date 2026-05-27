@@ -1,0 +1,38 @@
+[Unit]
+Description=Dispatch Queue Poller
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hermes
+WorkingDirectory=/home/hermes
+EnvironmentFile=/opt/agent/.env
+# STORY-538: Agent role for role-aware dispatch. Set to 'manager' on manager VMs.
+# Developer VMs default to 'developer'. Manager VMs should NOT auto-start this service.
+Environment=AGENT_ROLE=developer
+# CRITICAL: Must use run_dispatch_poller.py wrapper which unsets ANTHROPIC_BASE_URL
+# and ANTHROPIC_TOKEN so the SDK uses Claude OAuth instead of Azure Foundry.
+# Do NOT change ExecStart to call dispatch_poller directly — it will fail with 401
+# from Azure Foundry "invalid subscription key" because the .env exports those vars
+# for the hermes gateway, but they break Claude Code OAuth auth.
+# Prepend [Agent] (capitalized) to every stdout line before writing to the combined log
+# so Loki (job=hermes-gateway) lines carry the agent identity inline, matching the
+# [Agent] [teams-m365] / [Agent] [DISPATCH] pattern produced by deploy-agent.sh tailers.
+ExecStart=/bin/bash -c '/usr/bin/python3 /opt/agent/run_dispatch_poller.py 2>&1 | sed -u "s/^/[${AGENT_NAME^}] /" | tee -a /tmp/hermes-combined.log'
+
+# STORY-857: drain active dispatch v2 lease(s) before SIGKILL on restart.
+# drain_leases.py is idempotent and time-boxed (30s); ExecStop runs before
+# systemd kills children, paired with the SIGTERM handler inside the v2
+# poller so a `systemctl restart` mid-claim never orphans the lease.
+ExecStop=/usr/bin/python3 /opt/agent/drain_leases.py
+TimeoutStopSec=60
+KillMode=mixed
+
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

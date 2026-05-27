@@ -1,0 +1,20 @@
+name: Migration invariant
+on:
+  pull_request:
+    paths:
+      - "tech_dev_agents/**"
+      - "scripts/migrations/**"
+      - ".github/workflows/migration-invariant.yml"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r scripts/ci/requirements.txt 2>/dev/null || true
+      - run: python3 scripts/ci/check_migrations_match_columns.py origin/main HEAD

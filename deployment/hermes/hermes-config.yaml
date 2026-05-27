@@ -1,0 +1,31 @@
+model:
+  provider: "custom"
+  default: "gpt5chat"
+  base_url: "${AZURE_OPENAI_ENDPOINT}"
+
+compression:
+  enabled: true
+  threshold: 0.50
+
+terminal:
+  backend: local
+  cwd: "/home/hermes/workspace"
+  timeout: 300
+  persistent_shell: true
+
+toolsets:
+  - terminal
+  - code_execution
+  - file
+  - web
+  - memory
+
+agent:
+  max_turns: 90
+  reasoning_effort: "high"
+
+approvals:
+  mode: always_approve
+
+# Teams platform is enabled via TEAMS_ENABLED=true in .env
+# Do not define platforms: here — let Hermes initialize defaults

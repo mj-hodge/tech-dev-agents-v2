@@ -1,0 +1,52 @@
+TEAMS_HOME_CHANNEL: a:1TdYmkTlVFCp8OA-uoUNmfxLOGPHqxcd4SXktCnDyH_92aZ5UaVscYMpBTxOzBq5X4w1GoYPqbDeSDzBqzMGja076O602d_mxtCi2T94i8FJZWFHDplESpABbTniSFZiZ
+agent:
+  max_turns: 90
+  reasoning_effort: medium
+approvals:
+  mode: always_approve
+compression:
+  enabled: true
+  threshold: 0.50
+  target_ratio: 0.20
+  protect_last_n: 20
+  summary_model: claude-sonnet-4-6
+  summary_provider: anthropic
+delegation:
+  model: claude-haiku-4-5
+  provider: anthropic
+display:
+  tool_progress: 'off'
+  show_cost: true
+  background_process_notifications: all
+model:
+  base_url: https://moret-mnafhqa3-swedencentral.cognitiveservices.azure.com/anthropic
+  default: claude-sonnet-4-6
+  provider: anthropic
+platform_toolsets:
+  teams:
+  - terminal
+  - web
+  - memory
+  - skills
+  - delegation
+  - todo
+  - clarify
+  - cronjob
+  - session_search
+toolsets:
+- terminal
+- web
+- memory
+- skills
+- delegation
+- todo
+- clarify
+- cronjob
+- session_search
+group_sessions_per_user: true
+unauthorized_dm_behavior: pair
+terminal:
+  backend: local
+  cwd: /home/hermes/workspace
+  persistent_shell: true
+  timeout: 600

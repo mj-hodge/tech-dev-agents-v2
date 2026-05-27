@@ -1,0 +1,14 @@
+{
+  "source": "ccusage",
+  "total_tokens": 5411200,
+  "total_cost_usd": 23.41,
+  "days": [
+    {"date": "2026-04-15", "tokens": 712500, "cost_usd": 3.12, "blocks_used": 3},
+    {"date": "2026-04-16", "tokens": 821100, "cost_usd": 3.61, "blocks_used": 3},
+    {"date": "2026-04-17", "tokens": 903400, "cost_usd": 3.98, "blocks_used": 3},
+    {"date": "2026-04-18", "tokens": 612800, "cost_usd": 2.71, "blocks_used": 2},
+    {"date": "2026-04-19", "tokens": 770200, "cost_usd": 3.40, "blocks_used": 3},
+    {"date": "2026-04-20", "tokens": 888300, "cost_usd": 3.91, "blocks_used": 3},
+    {"date": "2026-04-21", "tokens": 702900, "cost_usd": 2.68, "blocks_used": 3}
+  ]
+}

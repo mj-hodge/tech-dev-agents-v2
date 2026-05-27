@@ -1,0 +1,161 @@
+# deployment/vm/canonical-state.yaml
+# Canonical VM state for tech-dev-agents agent VMs.
+#
+# Read by converge.py every 30 min (cron) on each agent VM.
+# Edit to add/remove categories or agent-specific overrides.
+# Deploy via: ./deployment/vm/push-code.sh all
+#
+# Schema version. Bump (with matching SUPPORTED_SCHEMA_VERSIONS update in
+# converge.py) on backwards-incompatible changes.
+version: 1
+
+# Agents this file applies to.
+# converge.py resolves the running agent via AGENT_NAME env var → hostname.
+# Aborts with exit 2 if the agent is not in this list.
+applies_to:
+  - dan
+  - derrick
+  - daisy
+  - devon
+  - morris
+
+# ---------- Category 1: git_config ----------
+# Walks every git clone under search_roots and asserts each (key, value) pair.
+# Per-agent values resolved from agent-registry.json by name.
+# Idempotent fix: git config --replace-all <key> <value> per drifted repo.
+git_config:
+  search_roots:
+    - /home/hermes/workspace
+    - /home/hermes/dev/hpi-gorillacommerce
+  # Single-value keys: every repo must have exactly this value.
+  required:
+    remote.origin.fetch: "+refs/heads/*:refs/remotes/origin/*"
+    core.autocrlf: "false"
+  # Multi-value keys: every listed value must appear (others may also be present).
+  required_multivalue:
+    safe.directory:
+      - "*"
+  # Per-agent keys resolved from {{ agent.field }} via agent-registry.json.
+  per_agent:
+    user.email: "{{ agent.email }}"
+    user.name: "tech-agent-{{ agent.name }}"
+
+# ---------- Category 2: apparmor_profiles ----------
+# Files in /etc/apparmor.d/. converge compares sha256 of the deployed file
+# against the source in the repo; if different or missing, copies + reloads.
+# Skips reload if file already byte-identical (idempotent).
+apparmor_profiles:
+  - target: /etc/apparmor.d/bwrap
+    source: deployment/vm/apparmor-bwrap.conf
+    reload_command:
+      - apparmor_parser
+      - "-r"
+      - /etc/apparmor.d/bwrap
+    # Requires root (cron runs as root on agent VMs via /etc/cron.d/).
+    requires_root: true
+
+# ---------- Category 3: required_cli ----------
+# Detection only in the pilot (no auto-install). Logs DRIFT_DETECTED if a
+# binary is missing or below min_version. Future story adds auto-install.
+required_cli:
+  detection_only: true
+  bins:
+    - name: gh
+      min_version: "2.40"
+      version_cmd:
+        - gh
+        - "--version"
+      version_re: 'gh version (\d+\.\d+\.\d+)'
+    - name: codex
+      min_version: "0.121"
+      version_cmd:
+        - codex
+        - "--version"
+      version_re: '(\d+\.\d+\.\d+)'
+    - name: ccusage
+      min_version: null
+      version_cmd:
+        - ccusage
+        - "--version"
+      version_re: null
+    - name: claude
+      min_version: null
+      version_cmd:
+        - claude
+        - "--version"
+      version_re: null
+    - name: node
+      min_version: "20.0"
+      version_cmd:
+        - node
+        - "--version"
+      version_re: 'v(\d+\.\d+\.\d+)'
+    - name: python3
+      min_version: "3.10"
+      version_cmd:
+        - python3
+        - "--version"
+      version_re: 'Python (\d+\.\d+\.\d+)'
+
+# ---------- Category 4: code_deploy_parity ----------
+# Detection only — fix is push-code.sh (separate concern). converge computes
+# md5 of each file and compares against deployment/vm/.deploy-manifest.json.
+# If the manifest is missing OR any hash mismatches, logs DRIFT_DETECTED.
+code_deploy_parity:
+  detection_only: true
+  manifest: deployment/vm/.deploy-manifest.json
+  files:
+    - /opt/agent/dispatch_poller.py
+    - /opt/agent/sdlc_phase_runner.py
+    - /opt/agent/adversarial_reviewer.py
+    - /opt/agent/claude_sdk_tool.py
+    - /opt/agent/run_dispatch_poller.py
+    - /opt/agent/terminal_guard.py
+    - /opt/agent/project_file.py
+
+# ---------- Category 5: hermes_cron_disabled ----------
+# The legacy Hermes JSON cron was deprecated 2026-04-24; crontab is canonical.
+# Asserts jobs.json has no enabled=true entries; fixes by rewriting file.
+hermes_cron_disabled:
+  detection_only: false
+  jobs_json: /home/hermes/.hermes/cron/jobs.json
+
+# ---------- Category 6: task_models (STORY-920) ----------
+# Per-task model routing for claude_sdk_tool.py direct SDK mode.
+# claude_sdk_tool.py reads this section with a 30s TTL cache.
+# opus_phases: drives sdlc_phase_runner.py OPUS_PHASES (overrides hardcoded {1,9,10}).
+# haiku_tasks: lightweight tasks routed to Haiku to reduce cost.
+task_models:
+  # Model IDs — config-driven so upgrades don't require code deploys.
+  # Sourced from Anthropic's current Claude 4.x family (May 2026).
+  haiku_id: claude-haiku-4-5-20251001
+  sonnet_id: claude-sonnet-4-6
+  opus_id: claude-opus-4-7
+  opus_phases:
+    - 1
+    - 9
+    - 10
+  haiku_tasks:
+    - classifier
+    - queue_triage
+    - outcome_classifier
+    - rebase_detector
+    - kb_summarizer
+  # Per-model pricing (USD per 1M tokens) — used for [USAGE_V2] cost telemetry.
+  # If a model ID isn't listed, cost is reported as 0.0 (visible in dashboards as a config gap).
+  pricing:
+    claude-haiku-4-5-20251001:
+      input: 0.80
+      output: 4.00
+      cache_write: 1.00
+      cache_read: 0.08
+    claude-sonnet-4-6:
+      input: 3.00
+      output: 15.00
+      cache_write: 3.75
+      cache_read: 0.30
+    claude-opus-4-7:
+      input: 15.00
+      output: 75.00
+      cache_write: 18.75
+      cache_read: 1.50

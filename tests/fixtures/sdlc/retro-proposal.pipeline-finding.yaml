@@ -1,0 +1,45 @@
+# retro-proposal-gc-data-v2.yaml
+# Golden fixture for SC-7 / REPLAY-4: a retro with platform findings.
+# This file represents the SECOND proposal emitted when the retro skill
+# detects pipeline/airflow/dbt/canon keywords in the findings.
+# Every proposal in this file targets the gc-data-v2 downstream repo.
+version: 1
+project: tech-dev-agents
+epic: epic-1000
+date: 2026-05-01
+target_repo: gc-data-v2
+metrics:
+  stories: 5
+  tests: 42
+  fix_loops: 2
+proposals:
+  - id: GC-001
+    finding: "Pipeline orchestration tasks lacked retry-on-failure documentation in canon docs"
+    category: pipeline
+    severity: High
+    target_repo: gc-data-v2
+    target_file: "docs/pipeline/retry-policy.md"
+    action: "Add canon doc section: Retry Policy for Pipeline Tasks"
+    proposed_text: |
+      ## Retry Policy for Pipeline Tasks
+      - [ ] All DAG tasks must declare `retries` and `retry_delay`
+      - [ ] Transient failures (HTTP 429, 503) must use exponential back-off
+      - [ ] DLQ entry created after max retries exhausted
+    evidence:
+      occurrences: 3
+      stories: ["STORY-1001", "STORY-1003"]
+  - id: GC-002
+    finding: "dbt model run ordering not reflected in canon documentation"
+    category: dbt
+    severity: Medium
+    target_repo: gc-data-v2
+    target_file: "docs/dbt/model-run-order.md"
+    action: "Document dbt model dependency graph in canon docs"
+    proposed_text: |
+      ## dbt Model Run Order
+      - [ ] Staging models must run before marts
+      - [ ] Source freshness checks must precede model runs
+      - [ ] Document `dbt ls --select` pattern for dependency inspection
+    evidence:
+      occurrences: 2
+      stories: ["STORY-1002"]

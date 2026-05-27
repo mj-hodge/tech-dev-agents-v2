@@ -1,0 +1,18 @@
+## PR Review --- Morris | advertising-amazon #313 --- STORY-598
+
+**Size:** Medium (144 lines, 4 files) | **CI:** ALL PASS | **Verdict:** APPROVE
+
+### SDLC Compliance: PASS
+Story tracked in `.project` as `phase_8_complete`. Small dispatch scope: seed.md + test-design.md present.
+
+### Findings
+- **LOW**: `check_blob_overlap.py` uses `utf-8-sig` encoding (line 30). Add a comment explaining this is intentional for BOM-bearing CSV artifacts.
+- **NIT**: `v2_clean_reset.sql` --- solid: atomicity via `BEGIN;...COMMIT;`, comprehensive pre-conditions, post-execution instructions.
+- **NIT**: Type hints, `--dry-run` flag, and full-row dedup fallback are clean defensive additions.
+
+### Rationale
+Focused, well-scoped cleanup scripts. SQL uses explicit transaction boundaries. No security issues. No multi-story bundling.
+
+**Next step:** advertising-amazon branch protection requires Mark to merge. Codex adversarial review in progress.
+
+*Review by Morris (Claude Code deep analysis) 2026-05-01*

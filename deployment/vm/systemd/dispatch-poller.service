@@ -1,0 +1,38 @@
+[Unit]
+Description=SDLC Dispatch Poller — claims and executes stories from the queue
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hermes
+Group=hermes
+EnvironmentFile=/opt/agent/.env
+ExecStart=/usr/bin/python3 /opt/agent/run_dispatch_poller.py
+
+# STORY-857: drain any active dispatch v2 lease before SIGKILL.
+# drain_leases.py reads /var/run/dispatch-poller/active_lease.json (or the
+# /tmp fallback) and POSTs /api/dispatch/v2/release for each lease_token.
+# Idempotent + best-effort: total drain budget is 30s, then systemd waits
+# up to TimeoutStopSec for the main process to exit.
+ExecStop=/usr/bin/python3 /opt/agent/drain_leases.py
+TimeoutStopSec=60
+
+Restart=on-failure
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+
+# STORY-857: KillMode=mixed sends SIGTERM to the main pid (which our handler
+# catches in dispatch_poller_v2.py to release the lease + terminate the SDK
+# child) AND SIGKILL to remaining children after TimeoutStopSec. This is
+# stricter than the prior STORY-522 KillMode=process and pairs with the
+# poller's own signal handler so leases never orphan on restart.
+KillMode=mixed
+
+# Safety: don't restart more than 3 times in 5 minutes
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Install]
+WantedBy=multi-user.target

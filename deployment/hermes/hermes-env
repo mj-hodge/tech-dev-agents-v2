@@ -1,0 +1,30 @@
+# Azure AI Foundry
+# Entrypoint derives this from OPENAI_BASE_URL when not explicitly set.
+# Format: https://<host>/openai/deployments/<model> (Azure native — shim adds api-version + api-key header)
+AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
+OPENAI_API_KEY=${OPENAI_API_KEY}
+
+# Hermes API Server (for Teams bridge)
+API_SERVER_ENABLED=true
+API_SERVER_KEY=dan-internal-bridge-key
+API_SERVER_PORT=8642
+API_SERVER_HOST=0.0.0.0
+
+# Microsoft Teams — Graph API change-notification adapter
+TEAMS_ENABLED=true
+TEAMS_CLIENT_ID=dc0cba0b-f12d-40da-88f0-adcda94075be
+TEAMS_CLIENT_SECRET=${MicrosoftAppPassword}
+TEAMS_TENANT_ID=1060148b-e4f2-4e64-880e-b8b05958e6fe
+TEAMS_BOT_USER_ID=65ea9265-f6b9-4a8d-9bc3-138ab075cb77
+TEAMS_NOTIFICATION_HOST=https://ca-tech-dev-agents-dev.yellowdune-d31b2d4f.eastus.azurecontainerapps.io
+TEAMS_WEBHOOK_PORT=3978
+
+# GitHub — passed through from container secrets
+GITHUB_TOKEN=${GITHUB_TOKEN}
+GH_TOKEN=${GITHUB_TOKEN}
+
+# Centralized Loki logging
+LOKI_URL=${LOKI_URL}
+LOKI_PROJECT=tech-dev-agents
+LOKI_ENV=${LOKI_ENV}
+LOKI_SOURCE_SYSTEM=internal

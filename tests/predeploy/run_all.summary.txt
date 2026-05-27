@@ -1,0 +1,155 @@
+### check_cve.sh
+START=2026-03-26T16:48:14Z
+END=2026-03-26T16:48:14Z
+RC=1
+[2026-03-26T16:48:14Z] START container CVE scan
+DETAIL=No CVE scanner found (trivy/grype missing)
+STATUS=BLOCKED
+
+### check_deps.sh
+START=2026-03-26T16:48:14Z
+END=2026-03-26T16:48:15Z
+RC=1
+[2026-03-26T16:48:14Z] START dependency audit
+[2026-03-26T16:48:14Z] Running pip-audit
+WARNING: The directory '/home/markoreta/.cache/pip' or its parent directory is not owned or is not writable by the current user. The cache has been disabled. Check the permissions and owner of that directory. If executing pip with sudo, you should use sudo's -H flag.
+Traceback (most recent call last):
+  File "/home/markoreta/.local/lib/python3.12/site-packages/urllib3/connection.py", line 174, in _new_conn
+    conn = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/markoreta/.local/lib/python3.12/site-packages/urllib3/util/connection.py", line 72, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/socket.py", line 963, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -2] Name or service not known
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/markoreta/.local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 716, in urlopen
+    httplib_response = self._make_request(
+                       ^^^^^^^^^^^^^^^^^^^
+  File "/home/markoreta/.local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 404, in _make_request
+    self._validate_conn(conn)
+  File "/home/markoreta/.local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 1061, in _validate_conn
+    conn.connect()
+  File "/home/markoreta/.local/lib/python3.12/site-packages/urllib3/connection.py", line 363, in connect
+    self.sock = conn = self._new_conn()
+                       ^^^^^^^^^^^^^^^^
+  File "/home/markoreta/.local/lib/python3.12/site-packages/urllib3/connection.py", line 186, in _new_conn
+    raise NewConnectionError(
+urllib3.exceptions.NewConnectionError: <urllib3.connection.HTTPSConnection object at 0x798afcbc5940>: Failed to establish a new connection: [Errno -2] Name or service not known
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/markoreta/.local/lib/python3.12/site-packages/requests/adapters.py", line 645, in send
+    resp = conn.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/markoreta/.local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 802, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/home/markoreta/.local/lib/python3.12/site-packages/urllib3/util/retry.py", line 594, in increment
+    raise MaxRetryError(_pool, url, error or ResponseError(cause))
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='pypi.org', port=443): Max retries exceeded with url: /pypi/aiosqlite/0.22.1/json (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x798afcbc5940>: Failed to establish a new connection: [Errno -2] Name or service not known'))
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/markoreta/.local/bin/pip-audit", line 6, in <module>
+    sys.exit(audit())
+             ^^^^^^^
+  File "/home/markoreta/.local/lib/python3.12/site-packages/pip_audit/_cli.py", line 554, in audit
+    for spec, vulns in auditor.audit(source):
+  File "/home/markoreta/.local/lib/python3.12/site-packages/pip_audit/_audit.py", line 68, in audit
+    for dep, vulns in self._service.query_all(specs):
+  File "/home/markoreta/.local/lib/python3.12/site-packages/pip_audit/_service/interface.py", line 180, in query_all
+    yield self.query(spec)
+          ^^^^^^^^^^^^^^^^
+  File "/home/markoreta/.local/lib/python3.12/site-packages/pip_audit/_service/pypi.py", line 64, in query
+    response: requests.Response = self.session.get(url=url, timeout=self.timeout)
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/markoreta/.local/lib/python3.12/site-packages/requests/sessions.py", line 605, in get
+    return self.request("GET", url, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/markoreta/.local/lib/python3.12/site-packages/requests/sessions.py", line 592, in request
+    resp = self.send(prep, **send_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/markoreta/.local/lib/python3.12/site-packages/requests/sessions.py", line 706, in send
+    r = adapter.send(request, **kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/markoreta/.local/lib/python3.12/site-packages/cachecontrol/adapter.py", line 76, in send
+    resp = super().send(request, stream, timeout, verify, cert, proxies)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/markoreta/.local/lib/python3.12/site-packages/requests/adapters.py", line 678, in send
+    raise ConnectionError(e, request=request)
+requests.exceptions.ConnectionError: HTTPSConnectionPool(host='pypi.org', port=443): Max retries exceeded with url: /pypi/aiosqlite/0.22.1/json (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x798afcbc5940>: Failed to establish a new connection: [Errno -2] Name or service not known'))
+DETAIL=pip-audit could not reach its vulnerability service
+STATUS=BLOCKED
+
+### check_secrets.sh
+START=2026-03-26T16:48:15Z
+END=2026-03-26T16:48:15Z
+RC=1
+[2026-03-26T16:48:15Z] START secrets scan
+DETAIL=No secrets scanner found (gitleaks/trufflehog missing)
+STATUS=BLOCKED
+
+### check_drift.sh
+START=2026-03-26T16:48:15Z
+END=2026-03-26T16:48:15Z
+RC=1
+[2026-03-26T16:48:15Z] START infrastructure drift detection
+DETAIL=No infra directory or supported drift tool configuration found
+STATUS=BLOCKED
+
+### check_monitoring.sh
+START=2026-03-26T16:48:16Z
+END=2026-03-26T16:48:16Z
+RC=1
+[2026-03-26T16:48:16Z] START monitoring health checks
+DETAIL=BASE_URL is not set
+STATUS=BLOCKED
+
+### check_adapters.sh
+START=2026-03-26T16:48:16Z
+END=2026-03-26T16:48:16Z
+RC=1
+[2026-03-26T16:48:16Z] START adapter/integration checks
+DETAIL=DATABASE_URL is not set
+STATUS=BLOCKED
+
+### check_migrations.sh
+START=2026-03-26T16:48:16Z
+END=2026-03-26T16:48:16Z
+RC=1
+[2026-03-26T16:48:16Z] START migration chain verification
+DETAIL=alembic.ini is missing
+STATUS=BLOCKED
+
+### check_smoke.sh
+START=2026-03-26T16:48:16Z
+END=2026-03-26T16:48:18Z
+RC=1
+[2026-03-26T16:48:16Z] START smoke test dry-run
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.0.2, pluggy-1.6.0
+rootdir: /mnt/c/Projects/tech-dev-agents/.worktrees/STORY-003
+plugins: anyio-4.12.1, asyncio-1.3.0, cov-7.0.0, timeout-2.4.0, respx-0.22.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 38 items / 38 deselected / 0 selected
+
+============================ 38 deselected in 1.42s ============================
+DETAIL=No smoke tests were selected
+STATUS=BLOCKED
+
+### check_cicd.sh
+START=2026-03-26T16:48:18Z
+END=2026-03-26T16:48:18Z
+RC=1
+[2026-03-26T16:48:18Z] START CI/CD gate verification
+DETAIL=No .github/workflows directory found
+STATUS=BLOCKED
+

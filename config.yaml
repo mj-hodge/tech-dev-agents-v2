@@ -1,0 +1,13 @@
+project:
+  name: tech-dev-agents
+  mode: new_project
+  scope: medium
+
+task_tracker:
+  platform: monday
+  workspace_id: 1196523
+  folder_id: 19856455
+
+council:
+  enabled: true
+  tier: free

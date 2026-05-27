@@ -1,0 +1,42 @@
+## PR Review - STORY-762: Brand Category Ranking Methodology
+
+**Size:** Large (926 additions, 1 deletion, 6 files)
+**CI:** No CI configured for this repo
+**Verdict:** APPROVE
+
+### SDLC Compliance
+
+| Artifact | Status | Notes |
+|----------|--------|-------|
+| features/story-762-brand-ranking-methodology/seed.md | PRESENT | Well-structured |
+| features/story-762-brand-ranking-methodology/test-design.md | PRESENT | 12 acceptance criteria |
+| .project updated | PRESENT | Phase 8 entry correct |
+| index.md / log.md updated | PRESENT | Properly logged |
+| analysis.md, research.md, expansion.md, selection.md | INFO-NOT REQUIRED | seed.md classifies scope as Small - consistent with STORY-750-755 series precedent |
+
+Scope note: seed.md classifies this as Small, consistent with how the entire STORY-750-755 wiki article series has been handled. Deliverables are complete for this scope.
+
+### Code Review
+
+**Findings:**
+
+- **[MEDIUM]** SPS normalization has a catalog-size bias: max_possible = len(brand_asins) * tier_weights penalizes brands with large catalogs vs. small concentrated ones. A brand with 200 ASINs where 50 rank in the top 1,000 will score lower than a brand with 5 ASINs where 2 are top-100, even if the first brand dominates sales volume. Consider percentile-based tiers relative to category size in the implementation phase.
+- **[MEDIUM]** brand_impressions is initialized to 0 in Step 1-2 pseudocode but never incremented - only brand_clicks and brand_purchases are summed. SSS formula currently only uses purchase share so this does not break the model, but impression share is silently missing if needed downstream.
+- **[LOW]** SSS weighted-average formula computes a weighted average of purchase-share ratios, not the brand share of total category purchase volume. Both approaches are defensible - article should note the distinction for implementers.
+- **[LOW]** Branded query multiplier (0.3) is an untested constant. For brands with strong branded search, this could systematically deflate SSS. Should be flagged as a calibration parameter during validation, not a settled constant.
+- **[LOW]** BSR tier thresholds (top-100, top-1,000, etc.) not normalized to category size. Top-100 = top 1% in a 10,000-ASIN category but top 50% in a 200-ASIN subcategory. Consider percentile-based tiers in implementation.
+- **[LOW]** Reference 14 (Karpathy LLM wiki gist) has no connection to Amazon brand category ranking - appears to be a stray reference from a prior article. Remove in a follow-up commit.
+- **[INFO]** Temporal half-life values (7-day BFS, 3-day SSS) lack empirical backing - should be flagged as calibration parameters.
+
+**What is solid:**
+- All 12 test-design acceptance criteria appear met (5,574 words, 18 sources, comparison tables, formulas throughout)
+- BFS + SSS + SPS three-pillar model correctly identifies complementary signal types; branded query down-weighting correctly applies STORY-753 market decomposition insight
+- Section 7 implementation plan is production-ready: 5 API endpoints, complete SQL schema with indexes, 10-week build plan with dependency ordering, rate-limit budget with correct identification of Catalog Items API as binding constraint
+
+### Verdict: APPROVE
+
+Technically sound methodology article that fully addresses all six research questions and meets all test-design criteria. Two medium-severity implementation notes (SPS catalog-size bias, silent impression data gap) should be communicated to the engineering team before pipeline implementation, but neither blocks the wiki article value as a reference.
+
+Note: advertising-amazon branch protection does not apply here - Morris can merge directly. Merging now.
+
+*- Morris (Claude Code analysis, 2026-04-29)*

@@ -1,0 +1,130 @@
+name: SDLC Framework Drift Check
+
+# STORY-1011: Detect when the local .sdlc/ submodule content drifts from the
+# pinned sdlc-framework version. Fails CI if the submodule SHA or file content
+# differs from the tagged baseline.
+#
+# How it works:
+#   1. Read .sdlc-pinned-version → extract tag (e.g., v1.0.0)
+#   2. Get current .sdlc submodule SHA from the git tree (no submodule checkout
+#      needed — avoids cross-repo auth issues with GITHUB_TOKEN on private repos)
+#   3. Clone sdlc-framework at the pinned tag → /tmp/sdlc-framework-pinned
+#   4. Clone sdlc-framework at the local submodule SHA → /tmp/sdlc-framework-local
+#   5. Byte-diff the two checkouts (excluding .git/, PINNED_VERSION, CLAUDE.md.local)
+#   6. Fail if any diff is non-empty; print drifted file list
+#
+# Auth note: sdlc-framework is a private repo. GITHUB_TOKEN does not have
+# cross-repo access by default. Set SDLC_FRAMEWORK_PAT as an org-level secret
+# with read access to hpi-gorillacommerce/sdlc-framework for this workflow to
+# function. The workflow fails with a clear message if the secret is missing.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.sdlc/**'
+      - '.sdlc-pinned-version'
+      - '.github/workflows/sdlc-drift-check.yml'
+      - 'tools/sdlc_drift_check.py'
+  push:
+    branches: [main]
+    paths:
+      - '.sdlc/**'
+      - '.sdlc-pinned-version'
+      - '.github/workflows/sdlc-drift-check.yml'
+      - 'tools/sdlc_drift_check.py'
+  workflow_dispatch:
+
+concurrency:
+  group: sdlc-drift-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  sdlc-drift-check:
+    name: SDLC framework drift check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repo (no submodule — framework cloned separately below)
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+          # We skip submodule checkout here because sdlc-framework is a private
+          # repo and GITHUB_TOKEN cannot clone across repos. We use
+          # SDLC_FRAMEWORK_PAT (org-level secret) in the clone steps below.
+
+      - name: Read pinned version
+        id: pin
+        run: |
+          if [ ! -f .sdlc-pinned-version ]; then
+            echo "::error::.sdlc-pinned-version file not found at repo root"
+            exit 1
+          fi
+          PINNED_VERSION=$(cat .sdlc-pinned-version | tr -d '[:space:]')
+          echo "version=${PINNED_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Pinned version: ${PINNED_VERSION}"
+
+      - name: Get current .sdlc submodule SHA
+        id: local_sha
+        run: |
+          SHA=$(git ls-tree HEAD -- .sdlc | awk '{print $3}')
+          if [ -z "${SHA}" ]; then
+            echo "::error::Could not read .sdlc submodule SHA from git tree — is .sdlc registered as a submodule?"
+            exit 1
+          fi
+          echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
+          echo "Current .sdlc submodule SHA: ${SHA}"
+
+      - name: Check SDLC_FRAMEWORK_PAT is configured
+        run: |
+          if [ -z "${{ secrets.SDLC_FRAMEWORK_PAT }}" ]; then
+            echo "::error::SDLC_FRAMEWORK_PAT secret is not set. This org-level secret must have read access to hpi-gorillacommerce/sdlc-framework."
+            echo "See: https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions"
+            exit 1
+          fi
+          echo "SDLC_FRAMEWORK_PAT is configured."
+
+      - name: Clone sdlc-framework at pinned tag
+        run: |
+          PINNED="${{ steps.pin.outputs.version }}"
+          git clone --depth 1 --branch "${PINNED}" \
+            "https://x-access-token:${{ secrets.SDLC_FRAMEWORK_PAT }}@github.com/hpi-gorillacommerce/sdlc-framework.git" \
+            /tmp/sdlc-framework-pinned 2>&1 || {
+            echo "::error::Failed to clone sdlc-framework at tag ${PINNED}"
+            echo "error: pinned version ${PINNED} not found in sdlc-framework — check tag exists upstream"
+            exit 1
+          }
+          echo "Cloned sdlc-framework@${PINNED} to /tmp/sdlc-framework-pinned"
+
+      - name: Clone sdlc-framework at local submodule SHA
+        run: |
+          LOCAL_SHA="${{ steps.local_sha.outputs.sha }}"
+          # Clone without checkout, then fetch the specific SHA
+          git clone --no-checkout \
+            "https://x-access-token:${{ secrets.SDLC_FRAMEWORK_PAT }}@github.com/hpi-gorillacommerce/sdlc-framework.git" \
+            /tmp/sdlc-framework-local 2>&1 || {
+            echo "::error::Failed to clone sdlc-framework for local SHA ${LOCAL_SHA}"
+            exit 1
+          }
+          git -C /tmp/sdlc-framework-local fetch --depth 1 origin "${LOCAL_SHA}" 2>&1 || {
+            echo "::error::Failed to fetch local SHA ${LOCAL_SHA} from sdlc-framework"
+            exit 1
+          }
+          git -C /tmp/sdlc-framework-local checkout "${LOCAL_SHA}"
+          echo "Cloned sdlc-framework@${LOCAL_SHA} to /tmp/sdlc-framework-local"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run drift check
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python3 -m tools.sdlc_drift_check \
+            /tmp/sdlc-framework-local \
+            /tmp/sdlc-framework-pinned

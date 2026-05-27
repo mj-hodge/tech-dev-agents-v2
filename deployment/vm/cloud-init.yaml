@@ -1,0 +1,221 @@
+#cloud-config
+# ============================================================================
+# Hermes Agent VM - cloud-init
+# Reusable template for spinning up dev agent VMs.
+# Secrets are injected at provision time via the deploy script.
+# ============================================================================
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - bash
+  - ca-certificates
+  - curl
+  - ffmpeg
+  - gettext-base
+  - git
+  - gnupg
+  - jq
+  - ripgrep
+  - sudo
+  - python3
+  - python3-pip
+  - python3-venv
+  - build-essential
+  # ---- Security baseline (STORY-729) ----
+  - auditd
+  - audispd-plugins
+  - ufw
+  - fail2ban
+  - unattended-upgrades
+
+# Create the hermes user with passwordless sudo
+users:
+  - name: hermes
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: sudo
+
+write_files:
+  # Agent environment file - secrets injected by deploy script
+  - path: /opt/agent/.env
+    permissions: "0600"
+    owner: hermes:hermes
+    content: |
+      # Azure AI Foundry
+      AZURE_OPENAI_ENDPOINT=${OPENAI_BASE_URL}openai/deployments/${AZURE_OPENAI_MODEL:-gpt5chat}
+      OPENAI_API_KEY=${OPENAI_API_KEY}
+      AZURE_OPENAI_API_VERSION=2024-12-01-preview
+
+      # GitHub
+      GITHUB_TOKEN=${GITHUB_TOKEN}
+      GH_TOKEN=${GITHUB_TOKEN}
+
+      # Microsoft Teams - Bot Framework
+      TEAMS_ENABLED=true
+      TEAMS_CLIENT_ID=${BOT_APP_ID}
+      TEAMS_CLIENT_SECRET=${BOT_APP_PASSWORD}
+      TEAMS_TENANT_ID=${TEAMS_TENANT_ID}
+      TEAMS_BOT_USER_ID=${TEAMS_BOT_USER_ID}
+      TEAMS_NOTIFICATION_HOST=${TEAMS_NOTIFICATION_HOST}
+      TEAMS_WEBHOOK_PORT=3978
+
+      # Hermes API Server
+      # Set DAN_BRIDGE_KEY in /opt/agent/.env before deploying
+      API_SERVER_ENABLED=true
+      API_SERVER_KEY=${DAN_BRIDGE_KEY}
+      API_SERVER_PORT=8642
+      API_SERVER_HOST=127.0.0.1
+
+      # Loki logging
+      LOKI_URL=${LOKI_URL}
+      LOKI_PROJECT=tech-dev-agents
+      LOKI_ENV=${LOKI_ENV:-dev}
+      LOKI_SOURCE_SYSTEM=internal
+
+      # Bot identity
+      BOT_NAME=${BOT_NAME}
+      BOT_EMAIL=${BOT_EMAIL}
+
+  # Hermes gateway systemd service
+  - path: /etc/systemd/system/hermes-gateway.service
+    content: |
+      [Unit]
+      Description=Hermes Agent Gateway
+      After=network-online.target
+      Wants=network-online.target
+
+      [Service]
+      Type=simple
+      User=hermes
+      WorkingDirectory=/home/hermes
+      EnvironmentFile=/opt/agent/.env
+      ExecStart=/opt/hermes-agent/venv/bin/hermes gateway
+      Restart=on-failure
+      RestartSec=5
+      StandardOutput=journal
+      StandardError=journal
+
+      [Install]
+      WantedBy=multi-user.target
+
+  # Health check endpoint (nginx or simple python - reuse from container)
+  - path: /opt/agent/health_server.py
+    permissions: "0755"
+    owner: hermes:hermes
+    content: |
+      #!/usr/bin/env python3
+      """Minimal health server for VM probes."""
+      import json, os, time
+      from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+      START = time.time()
+      BOT = os.environ.get("BOT_NAME", "agent")
+      class H(BaseHTTPRequestHandler):
+          def do_GET(self):
+              if self.path.startswith("/health"):
+                  data = json.dumps({"status":"ok","service":BOT,"uptime":int(time.time()-START)}).encode()
+                  self.send_response(200)
+                  self.send_header("Content-Type","application/json")
+                  self.end_headers()
+                  self.wfile.write(data)
+              else:
+                  self.send_response(404)
+                  self.end_headers()
+          def log_message(self,*a): pass
+      if __name__=="__main__":
+          ThreadingHTTPServer(("0.0.0.0",8080),H).serve_forever()
+
+  - path: /etc/systemd/system/agent-health.service
+    content: |
+      [Unit]
+      Description=Agent Health Server
+      After=network-online.target
+
+      [Service]
+      Type=simple
+      User=hermes
+      EnvironmentFile=/opt/agent/.env
+      ExecStart=/usr/bin/python3 /opt/agent/health_server.py
+      Restart=on-failure
+
+      [Install]
+      WantedBy=multi-user.target
+
+runcmd:
+  # ---- Node.js 22.x ----
+  - curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+  - apt-get install -y nodejs
+
+  # ---- Claude Code CLI + Codex CLI ----
+  - npm install -g @anthropic-ai/claude-code@latest @openai/codex@latest
+
+  # ---- GitHub CLI ----
+  - curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /usr/share/keyrings/githubcli-archive-keyring.gpg
+  - chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+  - echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list
+  - apt-get update && apt-get install -y gh
+
+  # ---- Docker CE (open source) ----
+  - install -m 0755 -d /etc/apt/keyrings
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  - chmod a+r /etc/apt/keyrings/docker.asc
+  - echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" > /etc/apt/sources.list.d/docker.list
+  - apt-get update && apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin
+  - usermod -aG docker hermes
+
+  # ---- uv (Python package manager) ----
+  - curl -LsSf https://astral.sh/uv/install.sh | sh
+  - export PATH="/root/.local/bin:$PATH"
+
+  # ---- Clone and install Hermes Agent ----
+  - git clone --recurse-submodules https://github.com/NousResearch/hermes-agent.git /opt/hermes-agent
+  - cd /opt/hermes-agent && /root/.local/bin/uv venv venv --python 3.11
+  - cd /opt/hermes-agent && VIRTUAL_ENV=/opt/hermes-agent/venv /root/.local/bin/uv pip install -e ".[all]"
+  - cd /opt/hermes-agent && npm install
+  - ln -sf /opt/hermes-agent/venv/bin/hermes /usr/local/bin/hermes
+
+  # ---- Install extra Python deps (Teams adapter) ----
+  - VIRTUAL_ENV=/opt/hermes-agent/venv /root/.local/bin/uv pip install --no-cache requests pyyaml aiohttp msal
+
+  # ---- Clone SDLC framework ----
+  - git clone https://github.com/hpi-gorillacommerce/sdlc-framework.git /opt/sdlc-framework
+  - ln -s /opt/sdlc-framework /home/hermes/.sdlc
+
+  # ---- Set up Hermes home directory ----
+  - mkdir -p /home/hermes/.hermes/{cron,sessions,logs,memories,skills,pairing,hooks,image_cache,audio_cache}
+  - mkdir -p /home/hermes/.claude
+  - mkdir -p /home/hermes/workspace
+  - mkdir -p /home/hermes/dev
+  - ln -s /opt/sdlc-framework/skills /home/hermes/.claude/skills
+  - chown -R hermes:hermes /home/hermes /opt/hermes-agent /opt/agent /opt/sdlc-framework
+
+  # ---- Copy Hermes config ----
+  - cp /opt/agent/.env /home/hermes/.hermes/.env
+  - chown hermes:hermes /home/hermes/.hermes/.env
+
+  # ---- Apply Teams adapter patches (copied by deploy script) ----
+  - |
+    if [ -f /opt/agent/teams.py ]; then
+      cp /opt/agent/teams.py /opt/hermes-agent/gateway/platforms/teams.py
+      chown hermes:hermes /opt/hermes-agent/gateway/platforms/teams.py
+    fi
+  - |
+    if [ -f /opt/agent/patch_gateway_config.py ]; then
+      python3 /opt/agent/patch_gateway_config.py
+    fi
+  - |
+    if [ -f /opt/agent/patch_tools_config.py ]; then
+      python3 /opt/agent/patch_tools_config.py
+    fi
+  - |
+    if [ -f /opt/agent/patch_azure_openai.py ]; then
+      python3 /opt/agent/patch_azure_openai.py
+    fi
+
+  # ---- Enable and start services ----
+  - systemctl daemon-reload
+  - systemctl enable agent-health.service
+  - systemctl start agent-health.service
+  - systemctl enable hermes-gateway.service
+  - systemctl start hermes-gateway.service

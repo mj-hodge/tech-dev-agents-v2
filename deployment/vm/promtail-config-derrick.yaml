@@ -1,0 +1,82 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /var/lib/promtail/positions.yaml
+
+clients:
+  - url: https://grafana.gorillacommerce.ai/loki/api/v1/push
+
+scrape_configs:
+  - job_name: hermes-combined
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: hermes-gateway
+          project: hermes
+          agent: derrick
+          env: dev
+          __path__: /run/hermes-log-sync/combined.log
+
+  - job_name: claude-code-files
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: claude-code
+          project: hermes
+          agent: derrick
+          env: dev
+          __path__: /tmp/claude-sdlc-logs/session-*.log
+
+  - job_name: hermes-logs
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: hermes-logs
+          project: hermes
+          agent: derrick
+          env: dev
+          __path__: /home/hermes/.hermes/logs/*.log
+
+  # STORY-031: Scrape [DISPATCH] lines from combined log with dedicated job label
+  - job_name: dispatch-poller
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: dispatch-poller
+          project: hermes
+          agent: derrick
+          env: dev
+          __path__: /run/hermes-log-sync/combined.log
+    pipeline_stages:
+      - regex:
+          expression: '(?P<dispatch_match>\[DISPATCH\])'
+      - drop:
+          source: dispatch_match
+          value: ''
+
+  # STORY-031: Scrape dispatch-poller systemd journal
+  - job_name: dispatch-poller-journal
+    journal:
+      labels:
+        job: dispatch-poller-journal
+        project: hermes
+        agent: derrick
+        service: dispatch-poller
+        env: dev
+      path: /var/log/journal
+    relabel_configs:
+      - source_labels: ['__journal__systemd_unit']
+        regex: 'dispatch-poller\.service'
+        action: keep
+    pipeline_stages:
+      - regex:
+          expression: '(?i)(?P<log_level>CRITICAL|ERROR|WARNING|INFO|DEBUG)'
+      - labels:
+          severity: log_level
+      - match:
+          selector: '{severity=""}'
+          stages:
+            - static_labels:
+                severity: info

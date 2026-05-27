@@ -1,0 +1,13 @@
+{
+  "source": "ccusage",
+  "current_block_tokens": null,
+  "current_block_cost_usd": null,
+  "time_remaining_minutes": null,
+  "block_start": null,
+  "block_end": null,
+  "p90_limit": 792000,
+  "sessions_in_block": 0,
+  "percent_used": null,
+  "remaining_tokens": null,
+  "error": "no active block"
+}

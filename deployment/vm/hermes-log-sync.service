@@ -1,0 +1,30 @@
+[Unit]
+Description=Sync hermes journal to combined log file
+After=hermes-gateway.service
+# STORY-728: cap restarts so a permission error on /tmp/hermes-combined.log
+# cannot trigger an infinite crash-loop (which on 2026-04-26 produced ~16k
+# failed-exec lines in /var/log/syslog and rebooted the VM).
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=hermes
+Group=hermes
+# STORY-730: systemd creates /run/hermes-log-sync/ owned by hermes on start,
+# eliminating the permission race that caused the 2026-04-26 crash-loop.
+# The symlink keeps /tmp/hermes-combined.log working for other writers
+# (dispatch-poller.service, crons, watchdog) without any changes to them.
+RuntimeDirectory=hermes-log-sync
+RuntimeDirectoryMode=0755
+ExecStartPre=/bin/ln -sf /run/hermes-log-sync/combined.log /tmp/hermes-combined.log
+ExecStart=/bin/bash -c "while true; do /usr/local/bin/hermes-log-sync.sh; sleep 30; done"
+Restart=on-failure
+# RestartSec=10 (not 5) caps restarts at ~6/min even before StartLimitBurst
+# trips, giving log-rotate / cleanup tools time to react.
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

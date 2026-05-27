@@ -1,0 +1,131 @@
+# Active Projects — Last Updated: 2026-04-17T01:03Z
+
+## Agents
+
+### Dan (agent-dan-gc) — 20.228.224.243
+- **Working:** Idle — STORY-340 and STORY-346 completed. PR #48 merged.
+- **PRs Open:** #87, #85, #84 in advertising-amazon; #35, #36, #37, #38, #39 in tech-dev-agents; #17, #18, #19 in tech-gc-knowledgebase; #11, #12, #13 in product-health-dashboard
+- **Status:** 🟡 Idle
+- **48 story failures in 24h** — caused by 3 dispatch bugs (see decisions-log). Fixes pending.
+
+### Derrick (agent-derrick-gc) — 20.121.210.186
+- **Working:** Idle — STORY-336 completed (PR #44 merged), STORY-337 completed (PR #45 closed).
+- **Failed stories:** STORY-037 (in failed-stories dir). STORY-313/314 were re-enqueued at 12:38 UTC but queue was cleared to stop churn.
+- **Status:** 🟡 Idle
+- **67 fast-failure events** — rate-limit detection broken, dispatch_poller.py never pauses.
+
+---
+
+## Dispatch Queue — Queue empty as of 01:00 UTC Apr 17 — both agents idle.
+
+Queue cleaned at ~19:55 UTC — zombie stories 330-333 cleared. STORY-337 pending (dashboard cost fix), STORY-340 claimed by Dan.
+
+| Story | Repo | Status | Notes |
+|-------|------|--------|-------|
+| STORY-313 | advertising-amazon | ⏳ Needs re-dispatch | Security-review + predeploy-gate for PR #91 |
+| STORY-314 | product-health-dashboard | ⏳ Needs re-dispatch | Refinement-report + site-reliability for PR #12 |
+| STORY-224 | tech-dev-agents | ⏳ Needs re-dispatch | Seed.md + test-design.md for PR #37 |
+| STORY-315 | tech-dev-agents | ⏳ Needs re-dispatch | SDLC deliverables for PR #39 (Cole curator skill) |
+| STORY-317 | product-health-dashboard | ⏳ Needs re-dispatch | Retroactive SDLC remediation for STORY-057/058/059/060/061 |
+| STORY-336 | tech-dev-agents | ✅ Completed by Derrick | Fix 3 dispatch bugs (claude_sdk_tool.py + dispatch_poller.py) |
+| STORY-337 | tech-dev-agents | ✅ Completed by Derrick | PR #45 CLOSED — superseded by STORY-346/PR #48 |
+| STORY-340 | (check repo) | ✅ Completed by Dan | (details TBD) |
+| STORY-346 | tech-dev-agents | ✅ Completed by Dan | PR #48 MERGED — restore per-agent cost breakdown fields |
+| STORY-330 | tech-gc-knowledgebase | ⏳ Needs re-dispatch | SharePoint gorillaguides ingestion (failed to clear zombie queue) |
+| STORY-331 | tech-gc-knowledgebase | ⏳ Needs re-dispatch | SharePoint creative/product ingestion (failed to clear zombie queue) |
+
+---
+
+## Open PRs — 15 total across 4 repos
+
+### advertising-amazon (6 open — 3 agent PRs + 3 awaiting Mark merge)
+| PR | Story | Author | Status |
+|----|-------|--------|--------|
+| #95 | — | jphillips-gc | fix: stg-celigo Unix timestamp filenames — APPROVED. Mark directed merge at 16:04 UTC; branch protection blocks Morris — Mark must merge directly. |
+| #93 | STORY-316 | Dan | docs: retroactive SDLC remediation batch 2 — APPROVED, awaiting Mark merge |
+| #92 | STORY-258 | Dan | docs: PR #87 review fixes — APPROVED, awaiting Mark merge |
+| #87 | STORY-258 | Dan | Campaign rename recommendations — Conditional LGTM, gitleaks CI |
+| #85 | STORY-257 | Dan | Bicep parity — SDLC re-review pending |
+| #84 | STORY-256 | Dan | Custom domain + cert in Bicep — SDLC re-review pending |
+
+### tech-dev-agents (5 open)
+| PR | Story | Author | Status |
+|----|-------|--------|--------|
+| #39 | STORY-322 | Dan | Cole the Curator skill — SDLC pending (STORY-315) |
+| #38 | STORY-311 | Dan | SDLC remediation for PR #35 and #36 — MERGED (was already merged before Morris attempted close) |
+| #37 | STORY-224 | Dan | Document Morris SDK-first toolset — REQUEST CHANGES (missing seed.md) |
+| #36 | STORY-304 | Dan | Event-driven Teams presence — DO NOT MERGE (3 critical bugs) |
+| #35 | STORY-305 | Dan | Fix dashboard cost display — MERGED (was already merged before Morris attempted close) |
+
+### product-health-dashboard (3 open)
+| PR | Story | Author | Status |
+|----|-------|--------|--------|
+| #13 | STORY-038/039 | Mark | Phase 1 seeds — UX Accessibility + Audit Trail (human PR) |
+| #12 | STORY-035 | Dan | RBAC — Large, CI failing, SDLC pending (STORY-314) |
+| #11 | STORY-055 | Dan | Phase 9/10 docs — needs review |
+
+### tech-gc-knowledgebase (3 open)
+| PR | Story | Author | Status |
+|----|-------|--------|--------|
+| #19 | STORY-312 | Dan | SDLC remediation — add seed.md + test-design.md |
+| #18 | STORY-312 | Dan | SDLC remediation (duplicate? — check if one should close) |
+| #17 | STORY-321 | Dan | Migrate to scratch/wiki/sources schema |
+
+### sourcing-warning-labels (1 open)
+| PR | Author | Status |
+|----|--------|--------|
+| #9 | harisgc (human) | Editable autofill fields — tests pass, MERGEABLE. Needs Mark's review. |
+
+---
+
+## PRs Merged Today (April 16)
+| Repo | PR | Story | Merged At (UTC) |
+|------|----|-------|-----------------|
+| advertising-amazon | #91 | STORY-310 | 11:47 — SDLC remediation review fixes |
+| advertising-amazon | #90 | STORY-310 | 11:40 — SDLC remediation deliverables for 10 open PRs |
+| advertising-amazon | #89 | — | 10:19 — Fix alembic migration chain (prod stuck) |
+| advertising-amazon | #88, #86, #83, #82, #81, #80, #79, #78, #77, #76, #75, #74, #73, #72, #71 | Various | ~12:00-12:30 — Bulk merged by Mark |
+| tech-gc-knowledgebase | #16 | STORY-258 | 10:49 — Research: Fabric vs ADF + SQL DW |
+| tech-gc-knowledgebase | #15 | STORY-257 | 10:45 — Knowledgebase coverage expansion |
+
+---
+
+## EPICs 004/005/006 — Advertising Amazon (Business Q&A)
+
+**Status:** Q&A session active — Diana Takach joined via Teams DM (2026-04-16 ~18:46 UTC)
+**Sections Q1.1–Q1.5: ✅ DECIDED**
+**Answers captured so far:**
+- ACoS: Calculate breakeven ACoS → apply down-multiplier. Varies by campaign type & product margin.
+- Bids: Amazon bid recommendations = sanity check, not source of truth.
+- Campaign structure: Different bids per campaign type → separate distinct campaigns.
+- Format decision: New artifact; lowest friction = conversational (option B).
+- **Q1.4c (ToS placement premium):** Performance-based — increase by 10% increments when ACOS is strong, evaluate L7.
+- **Q1.4d (Brand targeting ROAS floor):** $20+ ROAS typical for brand campaigns. $8 ROAS = floor for scaling. Deferred to Nik for per-product specifics.
+- **Q1.5 (Auto-targeting):** Bid highest close-match, moderate substitutes, lower loose-match, lowest/paused complements. Starting bid ratios = editable inputs. Performance override = yes (ACOS-driven). Confirmed by Nik.
+- **Q1.6 (Bid floor/ceiling):** ✅ DECIDED — Relative cap = 3x ad group default. No minimum bid for now. No absolute ceiling needed (portfolio/campaign caps suffice).
+- **Q1.7 (Scale/batch size):** 🟡 PARTIALLY DECIDED — Daily changed-only bids 2AM-6AM ET (pending Diana confirmation). Weekly full sweep day TBD by Diana.
+**Remaining:** Q1.7 (partial)–Q1.11, Q2.1–Q2.3, Q3.1–Q3.6, Q4.1–Q4.5
+**Next:** Q1.7 (awaiting Diana confirmation on nightly window + weekly sweep day), then Q1.8+
+
+---
+
+## Knowledgebase (tech-gc-knowledgebase)
+
+- **Structure:** `sources/` (raw landings) + `wiki/` (curated) — layered structure set by Mark
+- **Raw Sources:** 58 files across 4 ingest batches
+- **Wiki (curated):** 71 pages across 6 categories
+- **Recent merges:** STORY-257 (coverage expansion) and STORY-258 (Fabric vs ADF research) both merged Apr 16
+- **Open PRs:** #17 (schema migration), #18/#19 (SDLC remediation — one may be duplicate)
+- **Gap:** Mark restructured the layout — Morris needs to pull latest and verify structure matches expectations
+
+---
+
+## Known Issues
+
+1. **Gitleaks CI** — Several advertising-amazon PRs were blocked by gitleaks. PRs #89-91 merged after Mark handled it.
+2. **PR #35/#36 in tech-dev-agents** — Both have REQUEST CHANGES / DO NOT MERGE status from SDLC review. STORY-311 (SDLC remediation) submitted as PR #38.
+3. **Duplicate PRs** — tech-gc-knowledgebase has PR #18 and #19 both for STORY-312. One likely should be closed.
+4. **product-health-dashboard churn** — STORY-035 (RBAC) has failed 14+ times overnight. Systemic issue with this repo's test environment.
+5. **Friday Fleet Review cron** — Still using `deliver=origin` which will silently fail. Needs fix to explicit Teams chat ID.
+6. **Cron trigger architecture broken** — ~~ALL cron messages delivered to Teams are sent as the bot user, which the Teams poll loop skips. Crons cannot trigger Morris to act.~~ **FIXED:** `--script` pattern tested and working. Full cron rewire in progress — 5 old crons removed, 4 new `--script`-based crons pending creation (blocked on Mark copying scripts to `~/.hermes/scripts/`).
+7. **Dispatch bugs — 3 compounding issues** — (a) SDK exits rc=0 on rate limit, (b) poller rate-limit detection broken (journalctl vs subprocess pipes), (c) branch validation uses wrong story number for remediation stories. Investigation complete, 5 patches needed on both VMs.

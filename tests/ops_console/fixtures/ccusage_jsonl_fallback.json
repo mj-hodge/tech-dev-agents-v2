@@ -1,0 +1,13 @@
+{
+  "source": "jsonl",
+  "current_block_tokens": 380000,
+  "current_block_cost_usd": 1.72,
+  "time_remaining_minutes": 198,
+  "block_start": "14:00 UTC",
+  "block_end": "19:00 UTC",
+  "p90_limit": 750000,
+  "sessions_in_block": 5,
+  "percent_used": 50.7,
+  "remaining_tokens": 370000,
+  "error": null
+}

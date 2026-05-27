@@ -1,0 +1,116 @@
+# STORY-916: Queue Health SLOs — Grafana alert rules for dispatch v2
+#
+# This file is the standalone deliverable for the three queue-health alert rules.
+# The authoritative provisioning location is:
+#   deployment/observability/grafana-alerts.yml  (queue_health_slos group)
+#
+# Alert UIDs:
+#   dispatch-stuck-claimed   — PAGE when job stuck in claimed > 30m
+#   dispatch-unlinked-in-review — WARN when in_review has no pr_number > 60m
+#   dispatch-redispatch-loop — WARN when correlation_key redispatched > 3x in 24h
+#
+# See deployment/observability/grafana-alerts.yml for the complete rule definitions
+# including Postgres queries, threshold conditions, and annotation templates.
+#
+# Runbooks:
+#   data-remediations/queue-stuck-claimed-runbook.md
+#   data-remediations/queue-unlinked-in-review-runbook.md
+#   data-remediations/queue-redispatch-loop-runbook.md
+
+groups:
+  - name: dispatch_queue_health
+    interval: 1m
+    rules:
+
+      - uid: dispatch-stuck-claimed
+        title: "Dispatch: Stuck Claimed > 30m"
+        condition: C
+        labels:
+          severity: page
+          notification_channel: dispatch-ops
+        data:
+          - refId: A
+            datasourceUid: grafana-postgresql-datasource
+            model:
+              rawSql: "SELECT COUNT(*) AS stuck_count FROM dispatch_state_current WHERE state = 'claimed' AND now() - updated_at > interval '30 minutes' HAVING COUNT(*) > 0"
+              format: table
+          - refId: C
+            datasourceUid: "__expr__"
+            model:
+              type: threshold
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+                  reducer:
+                    type: last
+        for: 0s
+        annotations:
+          summary: "{{ $values.C.Value }} job(s) stuck in claimed state > 30 min — check Grafana dashboard"
+          runbook_url: "https://github.com/org/tech-dev-agents/blob/main/data-remediations/queue-stuck-claimed-runbook.md"
+
+      - uid: dispatch-unlinked-in-review
+        title: "Dispatch: Unlinked in_review > 60m"
+        condition: C
+        labels:
+          severity: warning
+          notification_channel: dispatch-ops
+        data:
+          - refId: A
+            datasourceUid: grafana-postgresql-datasource
+            model:
+              rawSql: "SELECT COUNT(*) AS unlinked_count FROM dispatch_state_current JOIN dispatch_jobs ON dispatch_state_current.job_id = dispatch_jobs.job_id WHERE dispatch_state_current.state = 'in_review' AND dispatch_jobs.pr_number IS NULL AND now() - updated_at > interval '60 minutes' HAVING COUNT(*) > 0"
+              format: table
+          - refId: C
+            datasourceUid: "__expr__"
+            model:
+              type: threshold
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+                  reducer:
+                    type: last
+        for: 0s
+        annotations:
+          summary: "{{ $values.C.Value }} job(s) in in_review with no pr_number > 60 min — check Grafana dashboard"
+          runbook_url: "https://github.com/org/tech-dev-agents/blob/main/data-remediations/queue-unlinked-in-review-runbook.md"
+
+      - uid: dispatch-redispatch-loop
+        title: "Dispatch: Redispatch Loop (>3 in 24h)"
+        condition: C
+        labels:
+          severity: warning
+          notification_channel: dispatch-ops
+        data:
+          - refId: A
+            datasourceUid: grafana-postgresql-datasource
+            model:
+              rawSql: "SELECT correlation_key, COUNT(*) AS dispatch_count FROM dispatch_v2_events WHERE event_type = 'redispatched' AND created_at > now() - INTERVAL '24 hours' AND correlation_key IS NOT NULL GROUP BY correlation_key HAVING COUNT(*) > 3"
+              format: table
+          - refId: C
+            datasourceUid: "__expr__"
+            model:
+              type: threshold
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+                  reducer:
+                    type: last
+        for: 0s
+        annotations:
+          summary: "{{ $values.C.Value }} correlation_key(s) redispatched >3 times in 24h — check Grafana dashboard"
+          runbook_url: "https://github.com/org/tech-dev-agents/blob/main/data-remediations/queue-redispatch-loop-runbook.md"
