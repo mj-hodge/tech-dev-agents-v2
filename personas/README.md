@@ -10,13 +10,34 @@ Persona files use markdown with YAML frontmatter so they stay compatible with th
 - Loader entrypoint: `tech_dev_agents.persona.PersonaLoader`
 - Rendered output: `--append-system-prompt`, `--allowedTools`, `--max-turns`
 
-## Shipped Personas
+## Agent Personas
 
-| File | Purpose |
-|------|---------|
-| `dev-agent-v1.md` | Primary development persona used by STORY-005 |
+| File | Agent | Role | SDLC Phases |
+|------|-------|------|-------------|
+| `the-architect.md` | The Architect | Research & Planning | 1-6 (Seed → Design) |
+| `neo.md` | Neo | Implementation | 7-8 (Test Design → Build) |
+| `morpheus.md` | Morpheus | Project Management | Backlog & Story Writing |
+| `agent-smith.md` | Agent Smith | Adversarial Reviewer | 8b (Code Review) |
+
+## Manager
+
+Skynet (the manager agent) does not use a persona file — it uses `deployment/vm/SOUL-skynet.md` directly as its system prompt.
+
+## SOUL Files (Deployment)
+
+Full operational SOUL files for each agent live in `deployment/vm/`:
+
+| File | Agent |
+|------|-------|
+| `SOUL-skynet.md` | Skynet (Manager) |
+| `SOUL-architect.md` | The Architect |
+| `SOUL-neo.md` | Neo |
+| `SOUL-morpheus.md` | Morpheus |
+| `SOUL-smith.md` | Agent Smith |
 
 ## Operational Note
 
-Persona changes take effect the next time the loader reads the file. The runner should restart to pick up edits.
-
+Persona changes take effect the next time the loader reads the file. Restart the dispatch poller for the relevant agent to pick up edits:
+```
+sudo systemctl restart dispatch-poller@AGENT_NAME
+```

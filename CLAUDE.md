@@ -9,7 +9,7 @@
 
 **Before doing anything non-trivial, scan your available skills first.** Claude Code lists them in a `<system-reminder>` block near the top of every session — every skill has a name, a one-line description, and trigger phrases. **If a skill matches what the user asked for, invoke it via the Skill tool. Do not write bash, gh, curl, or python to do something a skill already does.**
 
-This rule binds Morris specifically. The 2026-04-24 pattern Mark called out: *"sometimes I direct him to do something and he just tries to do that. how can we be sure he checks the tool list first?"* — answer: this rule. The check costs zero turns; the alternative is reinventing every workflow.
+This rule binds Skynet specifically. The 2026-04-24 pattern called out: *"sometimes I direct him to do something and he just tries to do that. how can we be sure he checks the tool list first?"* — answer: this rule. The check costs zero turns; the alternative is reinventing every workflow.
 
 **Order of operations on every user request:**
 
@@ -19,7 +19,7 @@ This rule binds Morris specifically. The 2026-04-24 pattern Mark called out: *"s
    - "fix PR N", "PR N is red", "autofix PR N" → `fix-pr`
    - "merge PR N", "merge approved PRs" → `merge`
    - "fleet status", "check agents", "what's everyone working on" → `fleet`
-   - "dispatch story X to agent Y", "send story to dan" → `dispatch`
+   - "dispatch story X to agent Y", "send story to neo" → `dispatch`
    - "spec a new feature", "spec ..." → `spec` / `phase-1`
    - "what's next for Mark", "what needs my attention" → `whats-next`
    - "deep code review of branch", "council on this work" → `council`
@@ -151,25 +151,16 @@ Python caches imported modules — a running poller keeps using old code indefin
 
 **Use the deploy script:**
 ```bash
-./deployment/vm/push-code.sh all          # push to all dev agents
-./deployment/vm/push-code.sh dan derrick  # push to specific agents
+./deployment/vm/push-code.sh all              # push to all agents
+./deployment/vm/push-code.sh neo architect    # push to specific agents
 ```
 
 The script: copies files → verifies hashes → restarts poller → runs smoke test (import check + claude CLI test + error scan) → **stops the poller if any test fails**.
 
-On 2026-04-20, a `-w` flag change broke all SDK invocations. Every story failed instantly for hours because there was no post-deploy test. The smoke test catches this class of bug automatically.
-
-**Never manually scp files without restarting.** If you must deploy manually:
+**Never update agent files without restarting the poller.** If you must update manually:
 ```bash
-scp -P 443 file.py azureagent@IP:/tmp/
-ssh -p 443 azureagent@IP "sudo cp /tmp/file.py /opt/agent/ && sudo systemctl restart dispatch-poller"
+sudo cp file.py /home/agents/AGENT_NAME/ && sudo systemctl restart dispatch-poller@AGENT_NAME
 ```
-
----
-
-## Monday.com Integration (Claude-specific)
-
-Use MCP tools for Monday.com board management: `mcp__claude_ai_monday_com__*`
 
 ---
 

@@ -2,22 +2,15 @@ ops_console:
   url: "${OPS_CONSOLE_URL}"
   api_key: "${OPS_CONSOLE_API_KEY}"
 
-teams:
-  mark_chat_id: "${MORRIS_MARK_CHAT_ID}"
-
 agents:
   github_logins:
-    dan: "Bot Dan"
-    derrick: "Bot Derrick"
-    morris: "Bot Morris"
-    daisy: "Bot Daisy"
-    devon: "Bot Devon"
+    skynet: "Bot Skynet"
+    architect: "Bot Architect"
+    neo: "Bot Neo"
+    morpheus: "Bot Morpheus"
+    smith: "Bot Smith"
   pr_repos:
-    - "hpi-gorillacommerce/tech-dev-agents"
-    - "hpi-gorillacommerce/advertising-amazon"
-    - "hpi-gorillacommerce/api-retail-target"
-    - "hpi-gorillacommerce/api-levanta"
-    - "hpi-gorillacommerce/api-nimbleway"
+    - "cybertronics/tech-dev-agents"
 
 thresholds:
   never_started_minutes: 15
@@ -26,16 +19,15 @@ thresholds:
   needs_info_decay_hours: 4
   repeated_failure_count: 3
   overload_pending_count: 3
-  max_stale_releases: 3        # H-1: per-story release cooldown; stories released >= this many times are skipped
+  max_stale_releases: 3
 
 interventions:
   rebase:
-    enabled: false            # flip once STORY-722 confirmed merged
+    enabled: false
     timeout_seconds: 300
-    script_path: "/opt/agent/scripts/auto_rebase_pr.sh"
+    script_path: "/home/agents/skynet/scripts/auto_rebase_pr.sh"
   release:
     enabled: true
-    story_702_merged: true    # STORY-702 merged 2026-04-26 — heartbeat columns live
 
 operating_modes:
   light_quota_threshold: 0.70
@@ -46,6 +38,6 @@ operating_modes:
   overnight_start_utc: "05:00"
   overnight_end_utc: "12:00"
 
-workdir: "/home/hermes/dev/hpi-gorillacommerce/tech-dev-agents"
-log_path: "/var/log/morris/orchestrator.log"
-lock_path: "/var/run/morris-orchestrator.lock"
+workdir: "/home/agents/skynet/workspace"
+log_path: "/var/log/skynet/orchestrator.log"
+lock_path: "/var/run/skynet-orchestrator.lock"

@@ -2,7 +2,7 @@
 schema_version: "1"
 name: dev-agent-v1
 version: "1.0.0"
-description: Primary autonomous development agent for SDLC execution
+description: Legacy generic dev agent persona — see neo.md, the-architect.md, morpheus.md, agent-smith.md for current agents
 model: sonnet
 max_turns: 25
 allowed_tools:

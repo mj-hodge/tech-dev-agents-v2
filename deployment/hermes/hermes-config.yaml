@@ -1,7 +1,7 @@
 model:
-  provider: "custom"
-  default: "gpt5chat"
-  base_url: "${AZURE_OPENAI_ENDPOINT}"
+  provider: "anthropic"
+  default: "claude-sonnet-4-6"
+  api_key: "${ANTHROPIC_API_KEY}"
 
 compression:
   enabled: true
@@ -9,16 +9,14 @@ compression:
 
 terminal:
   backend: local
-  cwd: "/home/hermes/workspace"
+  cwd: "/home/agents/workspace"
   timeout: 300
   persistent_shell: true
 
 toolsets:
   - terminal
-  - code_execution
-  - file
-  - web
   - memory
+  - skills
 
 agent:
   max_turns: 90
@@ -26,6 +24,3 @@ agent:
 
 approvals:
   mode: always_approve
-
-# Teams platform is enabled via TEAMS_ENABLED=true in .env
-# Do not define platforms: here — let Hermes initialize defaults

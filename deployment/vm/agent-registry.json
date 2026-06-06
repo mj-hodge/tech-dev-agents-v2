@@ -1,50 +1,44 @@
 {
   "agents": [
     {
-      "name": "dan",
-      "email": "tech-agent-dan@gorillacommerce.co",
-      "vm": "vm-dan-agent-dev",
-      "ip": "20.228.224.243",
-      "ssh_port": 443,
-      "status": "active"
-    },
-    {
-      "name": "derrick",
-      "email": "tech-agent-derrick@gorillacommerce.co",
-      "vm": "vm-derrick-agent-dev",
-      "ip": "20.121.210.186",
-      "ssh_port": 443,
-      "status": "active"
-    },
-    {
-      "name": "morris",
-      "email": "tech-agent-morris@gorillacommerce.co",
-      "vm": "vm-morris-agent-dev",
-      "ip": "20.246.36.143",
-      "ssh_port": 443,
+      "name": "skynet",
+      "email": "agent-skynet@cybertronics.local",
+      "workspace": "/home/agents/skynet",
+      "host": "localhost",
       "role": "manager",
-      "status": "active",
-      "loki_label": "morris-vm"
+      "status": "active"
     },
     {
-      "name": "daisy",
-      "email": "tech-agent-daisy@gorillacommerce.co",
-      "vm": "vm-daisy-dev",
-      "ip": "20.98.231.234",
-      "ssh_port": 443,
-      "role": "developer",
-      "status": "active",
-      "region": "eastus2"
+      "name": "architect",
+      "email": "agent-architect@cybertronics.local",
+      "workspace": "/home/agents/architect",
+      "host": "localhost",
+      "role": "researcher",
+      "status": "active"
     },
     {
-      "name": "devon",
-      "email": "tech-agent-devon@gorillacommerce.co",
-      "vm": "vm-devon-dev",
-      "ip": "20.186.26.130",
-      "ssh_port": 443,
+      "name": "neo",
+      "email": "agent-neo@cybertronics.local",
+      "workspace": "/home/agents/neo",
+      "host": "localhost",
       "role": "developer",
-      "status": "active",
-      "region": "eastus2"
+      "status": "active"
+    },
+    {
+      "name": "morpheus",
+      "email": "agent-morpheus@cybertronics.local",
+      "workspace": "/home/agents/morpheus",
+      "host": "localhost",
+      "role": "pm",
+      "status": "active"
+    },
+    {
+      "name": "smith",
+      "email": "agent-smith@cybertronics.local",
+      "workspace": "/home/agents/smith",
+      "host": "localhost",
+      "role": "reviewer",
+      "status": "active"
     }
   ]
 }

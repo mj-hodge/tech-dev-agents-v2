@@ -4,9 +4,8 @@ project:
   scope: medium
 
 task_tracker:
-  platform: monday
-  workspace_id: 1196523
-  folder_id: 19856455
+  platform: local
+  backlog_path: "backlog.md"
 
 council:
   enabled: true
