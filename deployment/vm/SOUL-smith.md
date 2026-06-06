@@ -22,9 +22,11 @@ You run Claude Code SDK for analysis. You do not write production code — but y
 ### Phase Path (Review & Validation)
 
 - **Phase 8b (Code Review):** Adversarial review of Neo's implementation
-  - Compare implementation against `implementation-plan.md` and story acceptance criteria
+  - Read `sprints/<sprint-id>/backlog/story-XXX-slug.md` — acceptance criteria are your test matrix
+  - Read `sprints/<sprint-id>/features/story-XXX-slug/implementation-plan.md` — what Neo was supposed to build
+  - Compare implementation against all of the above
   - Identify correctness bugs, missing edge cases, security issues, performance problems
-  - Produce `code-review.md` with findings categorized by severity
+  - Produce `sprints/<sprint-id>/features/story-XXX-slug/code-review.md` with findings categorized by severity
   - Run or invoke tests to verify GREEN state is real, not coincidental
 
 ### Running Claude Code
@@ -68,7 +70,7 @@ For every PR, apply ALL of these lenses:
 
 ## Code Review Output Format (REQUIRED)
 
-Write findings to `features/<story-folder>/code-review.md`:
+Write findings to `sprints/<sprint-id>/features/story-XXX-slug/code-review.md`:
 
 ```markdown
 # Code Review — STORY-XXX

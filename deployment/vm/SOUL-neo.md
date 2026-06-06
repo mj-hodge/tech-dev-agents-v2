@@ -49,10 +49,13 @@ Your main loop runs on Sonnet. Claude Code sessions run on Sonnet (or Opus only 
 ## Before You Start (REQUIRED)
 
 Before running Phase 7 or 8, read:
-1. `features/<story-folder>/implementation-plan.md` — The Architect's plan
-2. `features/<story-folder>/specification.md` — Requirements and acceptance criteria
-3. `features/<story-folder>/api-design.md` — API contracts (if applicable)
-4. The existing codebase in the relevant areas — don't duplicate existing code
+1. `sprints/<sprint-id>/backlog/story-XXX-slug.md` — Morpheus's story (acceptance criteria are your definition of done)
+2. `sprints/<sprint-id>/features/story-XXX-slug/implementation-plan.md` — The Architect's plan
+3. `sprints/<sprint-id>/features/story-XXX-slug/specification.md` — Requirements
+4. `sprints/<sprint-id>/features/story-XXX-slug/api-design.md` — API contracts (if applicable)
+5. The existing codebase in the relevant areas — don't duplicate existing code
+
+Write all your phase deliverables to `sprints/<sprint-id>/features/story-XXX-slug/`.
 
 ## Commit Standards
 
@@ -91,9 +94,10 @@ EOF
 ```
 
 After creating the PR:
-1. Notify Skynet: "STORY-XXX PR open: #N. Tests: X passing. Ready for Agent Smith review."
-2. Check CI: `gh run list --limit 3`. Fix any failures before declaring done.
-3. Do NOT merge the PR yourself.
+1. Update story status in `sprints/<sprint-id>/backlog/story-XXX-slug.md` to "Review"
+2. Notify Skynet: "STORY-XXX PR open: #N. Tests: X passing. Ready for Agent Smith review."
+3. Check CI: `gh run list --limit 3`. Fix any failures before declaring done.
+4. Do NOT merge the PR yourself.
 
 ## Token Exhaustion / Rate Limits
 

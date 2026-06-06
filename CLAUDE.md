@@ -57,23 +57,65 @@ See [AGENTS.md](./AGENTS.md) for: phase paths, advance categories, data mutation
 
 ---
 
+## Directory Structure (REQUIRED — know this before writing any file)
+
+All work is organized under sprints. **NEVER write deliverables to the project root, `docs/`, or the old `features/` directory.**
+
+```
+backlog/
+  product-backlog.md          ← Morpheus's full product backlog (unassigned items)
+  epics/
+    epic-XXX-slug.md          ← Epic definitions
+
+sprints/
+  sprint-XX/
+    sprint.md                 ← Sprint goal, dates, capacity, status
+    backlog/                  ← Stories Morpheus writes for this sprint
+      story-XXX-slug.md       ← Full story: acceptance criteria, scope, dependencies
+    features/                 ← SDLC deliverables — one subfolder per story
+      story-XXX-slug/
+        seed.md               ← Phase 1
+        research.md           ← Phase 2
+        expansion.md          ← Phase 3
+        analysis.md           ← Phase 4
+        selection.md          ← Phase 5
+        specification.md      ← Phase 6
+        implementation-plan.md
+        test-design.md        ← Phase 7
+        code-review.md        ← Phase 8b
+    ceremonies/
+      planning.md             ← Sprint planning
+      review.md               ← Sprint review / demo
+      retro.md                ← Retrospective
+```
+
+**Folder naming rules:**
+- Sprints: `sprint-XX` — zero-padded two-digit number (sprint-01, sprint-02, ...)
+- Stories in backlog: `story-XXX-kebab-case-slug.md` — flat file with acceptance criteria
+- Features: `story-XXX-kebab-case-slug/` — subfolder holding all phase deliverables
+
+**Example paths:**
+- `sprints/sprint-01/backlog/story-042-add-login-endpoint.md`
+- `sprints/sprint-01/features/story-042-add-login-endpoint/seed.md`
+- `sprints/sprint-01/features/story-042-add-login-endpoint/specification.md`
+- `sprints/sprint-01/ceremonies/retro.md`
+- `backlog/product-backlog.md`
+
+---
+
 ## Deliverable Location (REQUIRED)
 
-**All phase deliverables MUST be written to:** `features/<story-folder>/`
+**All phase deliverables MUST be written to:** `sprints/<sprint-id>/features/<story-slug>/`
 
-**Folder naming:** `features/story-XXX-kebab-case-slug/` where XXX is the story number and slug is derived from the task name.
+**NEVER write deliverables to:** the project root, `docs/`, `features/` (legacy), or loose in a sprint folder.
 
-Example: `features/story-001-agent-personas/seed.md`
-
-**NEVER write deliverables to the project root or a `docs/` directory.** The `features/` directory is the single source of truth for all SDLC artifacts.
-
-**Multi-worker mode:** When using worktrees, deliverables still go in `features/<story-folder>/` within the worktree.
+**Multi-worker mode:** When using worktrees, deliverables still go in `sprints/<sprint-id>/features/<story-slug>/` within the worktree.
 
 ---
 
 ## Phase Deliverables (REQUIRED — every phase MUST produce its file)
 
-All files below are written to `features/<story-folder>/`:
+All files below are written to `sprints/<sprint-id>/features/<story-slug>/`:
 
 | Phase | Output File(s) | Scope |
 |-------|---------------|-------|
@@ -88,16 +130,15 @@ All files below are written to `features/<story-folder>/`:
 | 6d | `ops-review.md` | Medium+ |
 | 7 | `test-design.md` + runnable test code in `tests/`/`e2e/` (RED state) | All |
 | 8 | Implementation code (all tests GREEN) + push + PR | All |
-| 8b | `code-review.md` | Interactive only (Morris PR review replaces in automated dispatch) |
-| 11 | `predeploy-gate.md` | Interactive only (Phase 8 now includes test verification + PR) |
+| 8b | `code-review.md` | Agent Smith produces this after Neo's PR |
 | 9 | `refinement-report.md` | Large/New |
 | 10 | `site-reliability.md` | Large/New |
 
-**Automated dispatch (agents via queue):** Phases 6b, 6c, 6d, 8b, and 11 are NOT required. Morris's PR review covers security, UX, ops, code review, and merge gating. Phase 8 includes test verification and PR creation.
+**Automated dispatch:** Phases 6b, 6c, 6d are required for Medium+ scope. Agent Smith's Phase 8b covers code review and merge gating. Phase 8 includes test verification and PR creation.
 
-**Every phase MUST also update:** `.project`, `backlog.md`, `development-tasks.md`, Monday.com task (add comment summarizing work)
+**Every phase MUST also update:** `.project`, `backlog/product-backlog.md`, the story file at `sprints/<sprint-id>/backlog/story-XXX-slug.md` (update status field)
 
-**A phase is NOT complete until its output file exists in `features/<story-folder>/` and tracking docs are updated.**
+**A phase is NOT complete until its output file exists in `sprints/<sprint-id>/features/<story-slug>/` and the story status is updated.**
 
 ---
 

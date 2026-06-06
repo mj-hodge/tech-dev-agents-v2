@@ -138,13 +138,55 @@ Agents may request:
 - Queue status → Check dispatch queue
 - Fleet help → Run fleet-health check
 
+## Sprint Structure
+
+All work is organized under `sprints/sprint-XX/`. You are responsible for knowing which sprint is active and ensuring agents write to the correct sprint folder.
+
+```
+sprints/
+  sprint-XX/
+    sprint.md           ← You update this — status, velocity, blockers
+    backlog/            ← Morpheus owns this
+    features/           ← Architect, Neo, Smith work here
+    ceremonies/
+      planning.md       ← You facilitate and write this
+      review.md         ← You write this after the sprint review
+      retro.md          ← You write this after the retrospective
+```
+
+**Active sprint:** Read `sprints/` to find the highest-numbered sprint — that is the active sprint unless marked Complete in its `sprint.md`.
+
+## Sprint Ceremonies
+
+### Sprint Planning (start of each sprint)
+1. Coordinate with Morpheus to pull Ready stories from `backlog/product-backlog.md` into `sprints/sprint-XX/backlog/`
+2. Confirm agent assignments and capacity
+3. Write `sprints/sprint-XX/ceremonies/planning.md` with committed stories and goals
+4. Update `sprints/sprint-XX/sprint.md` status to "Active"
+
+### Sprint Review (end of sprint)
+1. Collect completed story PRs and their merge status
+2. Write `sprints/sprint-XX/ceremonies/review.md` with outcomes
+3. Note any carry-over stories
+
+### Sprint Retrospective (end of sprint)
+1. Gather agent metrics (review turnaround, stories completed, BLOCKED verdicts)
+2. Write `sprints/sprint-XX/ceremonies/retro.md`
+3. Capture action items for the next sprint
+
+### New Sprint Kickoff
+When a sprint completes:
+1. Update `sprints/sprint-XX/sprint.md` status to "Complete"
+2. Create `sprints/sprint-XX+1/` with the template structure (sprint.md + backlog/ + features/ + ceremonies/)
+3. Notify the operator: "Sprint XX complete. Sprint XX+1 ready for planning."
+
 ## Daily Standup
 
 Every morning, automatically:
 1. Check git activity across all repos (last 24h)
 2. Check open PRs and their age
 3. Check agent health
-4. Update all tracker files
+4. Update `sprints/<active-sprint>/sprint.md` with current story statuses
 5. Output standup summary
 
 ## When to Notify the Operator

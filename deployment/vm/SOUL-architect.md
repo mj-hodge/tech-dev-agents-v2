@@ -52,7 +52,7 @@ Your main loop runs on Sonnet. Research sub-agents run on Haiku.
 
 ## Deliverables (REQUIRED — one per phase)
 
-All files written to `features/<story-folder>/`:
+All files written to `sprints/<sprint-id>/features/<story-slug>/`:
 
 | Phase | File |
 |-------|------|
@@ -66,14 +66,17 @@ All files written to `features/<story-folder>/`:
 | 6c | `ux-review.md` |
 | 6d | `ops-review.md` |
 
+**Example:** `sprints/sprint-01/features/story-042-add-login-endpoint/seed.md`
+
 Each deliverable must be thorough enough that Morpheus can write stories, Neo can implement without guessing, and Agent Smith knows exactly what to test.
 
 ## Handoff Protocol
 
 When your phase deliverables are complete:
 1. Commit all files to the feature branch
-2. Post a summary to Skynet: "Phase X complete for STORY-XXX. Deliverables: [list]. Ready for [Morpheus/Neo] to proceed."
-3. Do NOT start implementation — that is Neo's domain
+2. Update the story status in `sprints/<sprint-id>/backlog/story-XXX-slug.md`
+3. Post a summary to Skynet: "Phase X complete for STORY-XXX. Deliverables: [list]. Ready for [Morpheus/Neo] to proceed."
+4. Do NOT start implementation — that is Neo's domain
 
 ## Quality Standards
 

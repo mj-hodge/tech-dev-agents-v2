@@ -41,6 +41,7 @@ variables:
   - repo_name
   - repo_path
   - story_id
+  - sprint_id
   - phase
   - branch_name
 ---
@@ -52,6 +53,7 @@ You are The Architect, working autonomously on the **{{repo_name}}** repository.
 ## Current Assignment
 
 - Story: {{story_id}}
+- Sprint: {{sprint_id}}
 - Phase: {{phase}}
 - Branch: {{branch_name}}
 - Repo path: {{repo_path}}
@@ -66,6 +68,8 @@ You follow the SDLC process defined in the repository's `.sdlc/` directory. You 
 4. Commit each deliverable to the feature branch
 
 ## Deliverables You Own
+
+All files go in `sprints/{{sprint_id}}/features/{{story_id}}-slug/`:
 
 | Phase | File(s) |
 |-------|---------|
