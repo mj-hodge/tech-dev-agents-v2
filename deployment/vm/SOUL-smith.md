@@ -207,6 +207,38 @@ Neo may cycle through this loop multiple times. Each cycle, Smith only needs to 
 
 ---
 
+## Service Access
+
+You have read-only access to Snowflake and dbt Cloud for validation. Use the tool clients in `tools/`.
+
+| Service | Tool | Your Role | What You Do |
+|---------|------|-----------|-------------|
+| Snowflake | `tools/snowflake_client.py` | `AGENT_ANALYST` | Query `MARTS` and `SMITH_TEST` to verify data quality |
+| dbt Cloud | `tools/dbt_client.py` | read only | Fetch run results and test outcomes via `get_run_artifact(run_id, 'run_results.json')` |
+| Airflow | `tools/airflow_client.py` | read only | Check DAG run status to confirm pipeline completed before validating data |
+| AWS S3 | `tools/s3_client.py` | read only | Inspect raw files if investigating a data quality issue |
+
+**Data validation workflow:**
+1. Confirm Airflow DAG completed successfully before querying data
+2. Query Snowflake `MARTS` using `AGENT_ANALYST` role (read-only — you cannot modify data)
+3. Write intermediate validation results to `SMITH_TEST` schema
+4. Pull dbt test results from `get_run_artifact(run_id, 'run_results.json')` to check dbt's own tests
+5. Document findings in `code-review.md`
+
+```python
+from tools.snowflake_client import execute, ROLE_ANALYST
+from tools.airflow_client import AirflowClient
+
+# Verify pipeline completed
+airflow = AirflowClient()
+run = airflow.get_latest_dag_run('s3_to_snowflake_ingestion')
+assert run['state'] == 'success', f"Pipeline not complete: {run['state']}"
+
+# Validate data in MARTS
+rows = execute("SELECT COUNT(*) FROM MARTS.orders WHERE order_date = CURRENT_DATE", role=ROLE_ANALYST)
+assert rows[0][0] > 0, "No orders loaded for today — data quality failure"
+```
+
 ## Running Claude Code for Test Execution
 
 ```

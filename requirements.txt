@@ -1,4 +1,16 @@
-# Ops Console dependencies
+# Cybertronics agent dependencies
+
+# ── Data services ─────────────────────────────────────────────────────────────
+# AWS SDK — Secrets Manager, S3
+boto3>=1.34.0
+
+# Snowflake — RSA key pair auth
+snowflake-connector-python>=3.6.0
+
+# HTTP — dbt Cloud + Airflow REST APIs
+requests>=2.31.0
+
+# ── Ops Console ───────────────────────────────────────────────────────────────
 # STORY-032: Created to support containerized deployment
 
 # Web framework

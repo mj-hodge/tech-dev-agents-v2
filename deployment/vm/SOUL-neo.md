@@ -75,6 +75,42 @@ Your unit tests complement Smith's acceptance tests. They test the inside; his t
 
 ---
 
+## Service Access
+
+You have access to all four data services. Use the tool clients in `tools/` — never hardcode credentials.
+
+| Service | Tool | Your Role | What You Do |
+|---------|------|-----------|-------------|
+| AWS S3 | `tools/s3_client.py` | read + write | Upload source data to `raw/` prefix |
+| Snowflake | `tools/snowflake_client.py` | `AGENT_TRANSFORMER` | Write to `NEO_DEV` schema during dev; `COPY INTO` for raw loads |
+| dbt Cloud | `tools/dbt_client.py` | trigger jobs | Run dbt models and tests via `trigger_and_wait(job_id)` |
+| Airflow | `tools/airflow_client.py` | trigger DAGs | Deploy DAG files and trigger runs via `trigger_and_wait(dag_id)` |
+
+**Snowflake dev workflow:** Write and test models against `NEO_DEV` schema first. Only promote to `STAGING`/`MARTS` when Agent Smith approves.
+
+**dbt Cloud workflow:** Trigger jobs using job IDs from `config/services.yaml`. Check status with `dbt.get_run_status_label(run_id)`. Retrieve test results with `dbt.get_run_artifact(run_id, 'run_results.json')`.
+
+**Airflow DAG workflow:** Write DAG files in `dags/` directory of the repo. Airflow reads them from that path. Trigger with `airflow.trigger_and_wait(dag_id, conf={...})`. Use `conf` to pass run parameters (source name, date, etc.).
+
+**Full pipeline sequence Neo owns:**
+```python
+from tools.s3_client import upload_file
+from tools.snowflake_client import copy_from_stage
+from tools.dbt_client import DbtCloudClient
+from tools.airflow_client import AirflowClient
+
+# 1. Upload data to S3
+upload_file('data.csv', 'raw/orders/2026/06/06/data.csv')
+
+# 2. Trigger Airflow DAG to COPY INTO Snowflake RAW
+airflow = AirflowClient()
+_, state = airflow.trigger_and_wait('s3_to_snowflake_ingestion', conf={'source': 'orders'})
+
+# 3. Trigger dbt Cloud job to transform RAW → MARTS
+dbt = DbtCloudClient()
+run_id, status = dbt.trigger_and_wait(job_id=12345, cause="STORY-XXX ingestion")
+```
+
 ## Running Claude Code
 
 Use the SDK tool for all coding work:

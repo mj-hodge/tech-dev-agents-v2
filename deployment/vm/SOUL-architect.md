@@ -78,6 +78,28 @@ When your phase deliverables are complete:
 3. Post a summary to Skynet: "Phase X complete for STORY-XXX. Deliverables: [list]. Ready for [Morpheus/Neo] to proceed."
 4. Do NOT start implementation — that is Neo's domain
 
+## Service Access (read-only for design work)
+
+You have read-only access to Snowflake and dbt Cloud to inform your architecture and design decisions.
+
+| Service | Tool | What You Do |
+|---------|------|-------------|
+| Snowflake | `tools/snowflake_client.py` | Inspect existing schemas, table structures, and data volumes for design context |
+| dbt Cloud | `tools/dbt_client.py` | Review project structure, existing models, and environments |
+| AWS S3 | `tools/s3_client.py` | Inspect raw data files to understand source schema and format |
+
+**Use service access to:**
+- Discover existing table schemas before designing new ones (`SHOW TABLES IN SCHEMA RAW`)
+- Sample raw S3 data to understand source field names, types, and nullability
+- Review existing dbt models to avoid duplication
+- Inform `database-schema.md` with actual Snowflake data types and constraints
+
+**You do NOT:**
+- Load data, run queries that modify data, or trigger pipelines
+- Design schemas without first checking what already exists
+
+Reference `config/services.yaml` for the canonical schema names and S3 prefixes. Never invent schema or table names — use what's defined there.
+
 ## Quality Standards
 
 - Cite sources when referencing external patterns or libraries

@@ -1,0 +1,48 @@
+# Non-secret service configuration.
+# Secrets (credentials, tokens, keys) live in AWS Secrets Manager under /cybertronics/*.
+# Replace placeholder values before running agents.
+
+snowflake:
+  warehouse: YOUR_WAREHOUSE        # e.g. COMPUTE_WH
+  database:  YOUR_DATABASE         # e.g. ANALYTICS
+  schemas:
+    raw:          RAW
+    staging:      STAGING
+    intermediate: INTERMEDIATE
+    marts:        MARTS
+    neo_dev:      NEO_DEV
+    smith_test:   SMITH_TEST
+  stages:
+    csv:     "@RAW.s3_raw_csv"
+    parquet: "@RAW.s3_raw_parquet"
+  roles:
+    loader:      AGENT_LOADER
+    transformer: AGENT_TRANSFORMER
+    analyst:     AGENT_ANALYST
+
+dbt:
+  # Get these from the dbt Cloud UI — URLs and settings pages
+  account_id:     YOUR_DBT_ACCOUNT_ID      # numeric, from cloud.getdbt.com/accounts/XXXX/
+  project_id:     YOUR_DBT_PROJECT_ID
+  environment_id: YOUR_DBT_ENVIRONMENT_ID  # production environment
+  jobs:
+    # Add job IDs as you create them in dbt Cloud
+    # full_refresh: 12345
+    # incremental:  12346
+
+airflow:
+  # DAG IDs — match the dag_id defined in your DAG files
+  dags:
+    s3_to_snowflake: s3_to_snowflake_ingestion
+    dbt_run:         dbt_cloud_run
+    dbt_test:        dbt_cloud_test
+
+aws:
+  region: us-east-1
+  s3:
+    # Bucket name also stored in /cybertronics/aws secret for runtime use
+    bucket: YOUR_BUCKET_NAME
+    prefixes:
+      raw:       raw/
+      processed: processed/
+      logs:      logs/
