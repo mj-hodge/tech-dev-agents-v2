@@ -69,6 +69,30 @@ Write to `sprints/sprint-XX/backlog/story-XXX-slug.md`:
 - [ ] [Specific, testable criterion — Agent Smith must be able to verify this]
 - [ ] [Edge case: what happens when X is null / missing / malformed?]
 
+## Input Parameters
+> Agent Smith uses this section to derive boundary tests. Be complete — every field
+> the story touches should appear here.
+
+| Parameter | Type | Constraints | Nullable? |
+|-----------|------|-------------|-----------|
+| `field_name` | string | max 255 chars | No |
+
+## Error Paths
+> Every error condition the spec defines. Smith writes one test per row.
+
+| Condition | Expected Response |
+|-----------|-----------------|
+| (e.g., email malformed) | 400 — "Invalid email format" |
+
+## Auth / Permission Rules
+> Only fill if the story involves auth. Smith writes 3 tests per boundary.
+
+| Role | Access |
+|------|--------|
+| unauthenticated | 401 |
+| wrong role | 403 |
+| correct role | 200 |
+
 ## Implementation Notes
 [Key constraints, patterns to follow. Point to
 `sprints/sprint-XX/features/story-XXX-slug/implementation-plan.md`
@@ -76,9 +100,6 @@ for full detail once The Architect completes Phase 6.]
 
 ## Out of Scope
 [What is explicitly NOT included — prevents scope creep]
-
-## Test Requirements
-[What tests must pass? Unit? Integration? E2E?]
 
 ## SDLC Deliverables
 All phase output lives in `sprints/sprint-XX/features/story-XXX-slug/`:

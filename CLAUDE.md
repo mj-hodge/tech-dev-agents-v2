@@ -128,13 +128,15 @@ All files below are written to `sprints/<sprint-id>/features/<story-slug>/`:
 | 6b | `security-review.md` | Medium+ |
 | 6c | `ux-review.md` | Medium+ |
 | 6d | `ops-review.md` | Medium+ |
-| 7 | `test-design.md` + runnable test code in `tests/`/`e2e/` (RED state) | All |
-| 8 | Implementation code (all tests GREEN) + push + PR | All |
-| 8b | `code-review.md` | Agent Smith produces this after Neo's PR |
+| 7 | **Agent Smith:** `test-design.md` + runnable acceptance tests in `tests/acceptance/` (RED state — written before Neo touches code) | All |
+| 8 | **Neo:** Production code + unit tests in `tests/unit/` (all of Smith's acceptance tests GREEN) + push + PR | All |
+| 8b | **Agent Smith:** Re-runs acceptance tests against Neo's PR → `code-review.md` with coverage verdict | All |
 | 9 | `refinement-report.md` | Large/New |
 | 10 | `site-reliability.md` | Large/New |
 
-**Automated dispatch:** Phases 6b, 6c, 6d are required for Medium+ scope. Agent Smith's Phase 8b covers code review and merge gating. Phase 8 includes test verification and PR creation.
+**Phase 7/8 loop:** Smith writes acceptance tests (RED) → Neo implements to pass them (GREEN) → Smith re-verifies and reviews → CHANGES REQUIRED loops Neo back to Phase 8 → APPROVED signals Skynet to merge.
+
+**Automated dispatch:** Phases 6b, 6c, 6d are required for Medium+ scope. Smith's Phase 7 + 8b covers test design, code review, and merge gating.
 
 **Every phase MUST also update:** `.project`, `backlog/product-backlog.md`, the story file at `sprints/<sprint-id>/backlog/story-XXX-slug.md` (update status field)
 

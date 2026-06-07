@@ -25,19 +25,43 @@
 - [ ] *(Another criterion)*
 - [ ] *(Edge case: what happens when X is null / missing / malformed?)*
 
+## Input Parameters
+
+> **Morpheus fills this section.** Agent Smith uses it to derive Tier 2 boundary tests.
+> List every input the story touches — API fields, function arguments, form inputs, config values.
+
+| Parameter | Type | Constraints | Nullable? |
+|-----------|------|-------------|-----------|
+| `field_name` | string | max 255 chars, valid email format | No |
+| `field_name` | integer | 1–1000 | Yes |
+
+## Error Paths
+
+> List every error condition the spec defines. Smith writes a test for each one.
+
+| Condition | Expected Response |
+|-----------|------------------|
+| *(e.g., email is malformed)* | 400 Bad Request — "Invalid email format" |
+
+## Auth / Permission Rules
+
+> Does this story involve auth? List the roles and their access.
+
+| Role | Access |
+|------|--------|
+| *(e.g., unauthenticated)* | 401 Unauthorized |
+| *(e.g., viewer role)* | 403 Forbidden |
+| *(e.g., admin role)* | 200 OK |
+
 ## Implementation Notes
 
 *(Key constraints, patterns to follow, files likely to be touched. Point to
-`features/story-XXX-slug/implementation-plan.md` for full detail once The Architect
-completes Phase 6.)*
+`sprints/sprint-XX/features/story-XXX-slug/implementation-plan.md` for full detail once
+The Architect completes Phase 6.)*
 
 ## Out of Scope
 
 *(What is explicitly NOT included in this story — prevents scope creep)*
-
-## Test Requirements
-
-*(What tests must pass? Unit? Integration? E2E? What fixtures are needed?)*
 
 ## SDLC Deliverables
 
