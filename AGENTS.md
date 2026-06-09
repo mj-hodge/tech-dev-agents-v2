@@ -1,1 +1,1 @@
-.sdlc/AGENTS.md
+../../.sdlc/AGENTS.md
